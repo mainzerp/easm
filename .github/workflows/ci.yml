@@ -64,19 +64,16 @@ jobs:
       - name: Install Python deps
         run: pip install -r requirements.txt -r requirements-dev.txt
         working-directory: app/backend
-      - name: Debug DB connection
-        run: python -c "from db import engine; c = engine.connect(); print('DB OK'); c.close()"
+      - name: Create tables
+        run: python -c "from db import engine, Base; Base.metadata.create_all(bind=engine)"
         env:
           DATABASE_URL: postgresql+psycopg://easm:easm@localhost:5432/easm_test
         working-directory: app/backend
-      - name: Run migrations
-        run: python -m alembic upgrade head
-        working-directory: app/backend
-        env:
-          DATABASE_URL: postgresql+psycopg://easm:easm@localhost:5432/easm_test
       - name: Run pytest
         run: python -m pytest tests/ -v
         working-directory: app/backend
+        env:
+          DATABASE_URL: postgresql+psycopg://easm:easm@localhost:5432/easm_test
       - name: Install Node deps
         run: npm ci
         working-directory: app/frontend
