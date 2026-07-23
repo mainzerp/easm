@@ -65,7 +65,7 @@ jobs:
         run: pip install -r requirements.txt -r requirements-dev.txt
         working-directory: app/backend
       - name: Run migrations
-        run: alembic upgrade head
+        run: python -m alembic upgrade head
         working-directory: app/backend
       - name: Run pytest
         run: python -m pytest tests/ -v
