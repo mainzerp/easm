@@ -9,18 +9,16 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "postgresql+psycopg://easm:easm@localhost:5432/easm_test",
 )
 
-from db import Base, SessionLocal, engine  # noqa: E402
-import auth  # noqa: E402
 from main import app  # noqa: E402
+import auth  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+def _setup_auth():
+    os.environ.pop("EASM_ADMIN_PASSWORD", None)
+    os.environ.pop("EASM_ADMIN_PASSWORD_HASH", None)
     auth.load_credentials()
     yield
-    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
@@ -30,16 +28,15 @@ def client() -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def admin_session(client: TestClient) -> str:
-    from auth import SESSION_COOKIE
+def fresh_pw() -> str:
     import secrets
 
-    resp = client.get("/api/auth/check")
-    data = resp.json()
-    password = secrets.token_urlsafe(16)
-    auth.set_password_hash(auth.hash_password(password))
+    pw = secrets.token_urlsafe(16)
+    auth.set_password_hash(auth.hash_password(pw))
+    return pw
 
-    resp = client.post("/api/auth/login", json={"password": password})
-    if resp.status_code != 200:
-        return ""
-    return resp.cookies.get(SESSION_COOKIE, "")
+
+@pytest.fixture(autouse=True)
+def _reset_totp():
+    auth.set_totp_secret(None)
+    yield
