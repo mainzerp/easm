@@ -50,6 +50,11 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - EASM_ADMIN_PASSWORD=${EASM_ADMIN_PASSWORD:-}
       - EASM_ADMIN_PASSWORD_HASH=${EASM_ADMIN_PASSWORD_HASH:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/auth/check"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks:
       - easm
     depends_on:
@@ -98,7 +103,8 @@ services:
       - "3000:80"
       - "3443:443"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - easm
 

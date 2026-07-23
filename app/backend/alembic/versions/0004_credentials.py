@@ -9,6 +9,7 @@ import json
 import os
 
 from alembic import op
+from sqlalchemy import text
 
 revision = "0004"
 down_revision = "0003"
@@ -19,7 +20,7 @@ depends_on = None
 def upgrade() -> None:
     # Check whether a credentials row already exists.
     conn = op.get_bind()
-    row = conn.execute("SELECT key FROM settings WHERE key = 'credentials'").fetchone()
+    row = conn.execute(text("SELECT key FROM settings WHERE key = 'credentials'")).fetchone()
     if row:
         return
 
@@ -43,14 +44,14 @@ def upgrade() -> None:
 
         generated = secrets.token_urlsafe(16)
         password_hash = PasswordHasher().hash(generated)
-        print(f"EASM Migration: Kein Admin-Passwort gesetzt, generiert: {generated}", flush=True)
+        print(f"EASM Migration: No admin password set, generated: {generated}", flush=True)
     else:
         # Nothing to seed.
         return
 
     value = {"password_hash": password_hash, "totp_secret": totp_env}
     conn.execute(
-        "INSERT INTO settings (key, value) VALUES ('credentials', (:value)::jsonb)",
+        text("INSERT INTO settings (key, value) VALUES ('credentials', (:value)::jsonb)"),
         {"value": json.dumps(value)},
     )
 
