@@ -44,7 +44,7 @@ async def scheduled_scan():
         return
     scan, overlap = _enqueue_scan(domains, "schedule")
     if scan is None:
-        print("EASM Scheduler: Scan läuft bereits — geplanter Lauf übersprungen.", flush=True)
+        print("EASM Scheduler: A scan is already running — scheduled run skipped.", flush=True)
     else:
         print(f"EASM Scheduler: Geplanter Scan eingereiht ({scan.date}).", flush=True)
 
@@ -58,7 +58,7 @@ def apply_schedule():
     try:
         trigger = CronTrigger.from_crontab(schedule)
     except (ValueError, KeyError):
-        print(f"EASM Scheduler: Ungültiger Cron-Ausdruck '{schedule}' — deaktiviert.", flush=True)
+        print(f"EASM Scheduler: Invalid cron expression '{schedule}' — scheduler disabled.", flush=True)
         return
     scheduler.add_job(scheduled_scan, trigger, id=SCHEDULED_JOB_ID, replace_existing=True)
 
@@ -140,16 +140,16 @@ def login(req: LoginRequest, request: Request, response: Response):
     ip = request.client.host if request.client else "unknown"
     if auth.is_blocked(ip):
         raise HTTPException(
-            status_code=429, detail="Zu viele Versuche — bitte später erneut probieren."
+            status_code=429, detail="Too many attempts — please try again later."
         )
     if not auth.verify_password(req.password):
         auth.register_failure(ip)
-        raise HTTPException(status_code=401, detail="Ungültige Zugangsdaten.")
+        raise HTTPException(status_code=401, detail="Invalid credentials.")
     if auth.totp_enabled() and not auth.verify_totp(req.code):
         auth.register_failure(ip)
         raise HTTPException(
             status_code=401,
-            detail="totp_required" if not req.code else "Ungültiger 2FA-Code.",
+            detail="totp_required" if not req.code else "Invalid 2FA code.",
         )
     auth.clear_failures(ip)
     token = auth.create_session()
@@ -207,7 +207,7 @@ def change_password(req: ChangePasswordRequest, request: Request, response: Resp
     ip = request.client.host if request.client else "unknown"
     if not auth.verify_password(req.current_password):
         auth.register_failure(ip)
-        raise HTTPException(status_code=401, detail="Ungültiges aktuelles Passwort.")
+        raise HTTPException(status_code=401, detail="Invalid current password.")
     if not req.new_password:
         raise HTTPException(status_code=400, detail="Neues Passwort darf nicht leer sein.")
     auth.clear_failures(ip)
@@ -222,9 +222,9 @@ def totp_setup(req: TotpSetupRequest, request: Request):
     ip = request.client.host if request.client else "unknown"
     if not auth.verify_password(req.current_password):
         auth.register_failure(ip)
-        raise HTTPException(status_code=401, detail="Ungültiges Passwort.")
+        raise HTTPException(status_code=401, detail="Invalid password.")
     if auth.totp_enabled():
-        raise HTTPException(status_code=400, detail="2FA ist bereits aktiviert.")
+        raise HTTPException(status_code=400, detail="2FA is already enabled.")
     auth.clear_failures(ip)
     return auth.generate_totp_setup()
 
@@ -235,11 +235,11 @@ def totp_verify(req: TotpVerifyRequest, request: Request):
     if not auth.verify_password(req.current_password):
         auth.register_failure(ip)
         auth.clear_pending_totp_secret()
-        raise HTTPException(status_code=401, detail="Ungültiges Passwort.")
+        raise HTTPException(status_code=401, detail="Invalid password.")
     if not auth.verify_pending_totp(req.code):
         auth.register_failure(ip)
         auth.clear_pending_totp_secret()
-        raise HTTPException(status_code=401, detail="Ungültiger 2FA-Code.")
+        raise HTTPException(status_code=401, detail="Invalid 2FA code.")
     auth.clear_failures(ip)
     auth.commit_pending_totp_secret()
     return {"totp_enabled": True}
@@ -250,10 +250,10 @@ def totp_disable(req: TotpDisableRequest, request: Request):
     ip = request.client.host if request.client else "unknown"
     if not auth.verify_password(req.current_password):
         auth.register_failure(ip)
-        raise HTTPException(status_code=401, detail="Ungültiges Passwort.")
+        raise HTTPException(status_code=401, detail="Invalid password.")
     if auth.totp_enabled() and req.code and not auth.verify_totp(req.code):
         auth.register_failure(ip)
-        raise HTTPException(status_code=401, detail="Ungültiger 2FA-Code.")
+        raise HTTPException(status_code=401, detail="Invalid 2FA code.")
     auth.clear_failures(ip)
     auth.clear_pending_totp_secret()
     auth.set_totp_secret(None)

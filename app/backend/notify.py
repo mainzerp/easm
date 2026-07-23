@@ -97,6 +97,6 @@ def notify_scan_failed(cfg: dict, target_desc: str, reason: str) -> None:
 def send_test_mail(cfg: dict) -> None:
     send_mail(
         cfg,
-        "[EASM] Test-Benachrichtigung",
-        "Diese Test-Mail bestätigt, dass die SMTP-Konfiguration funktioniert.",
+        "[EASM] Test Notification",
+        "This test email confirms the SMTP configuration is working.",
     )

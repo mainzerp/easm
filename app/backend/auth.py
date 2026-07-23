@@ -100,7 +100,7 @@ def load_credentials() -> None:
         with _lock:
             _password_hash = stored["password_hash"]
             _totp_secret = stored.get("totp_secret", "")
-        print("EASM: Credentials aus DB geladen.", flush=True)
+        print("EASM: Credentials loaded from DB.", flush=True)
         return
 
     # No credentials in DB yet: seed from env or generate.
