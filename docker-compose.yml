@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: ${EASM_DB_PASSWORD:?EASM_DB_PASSWORD is required}
       POSTGRES_DB: easm
     volumes:
-      - easm-db:/var/lib/postgresql/data
+      - easm-db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U easm -d easm"]
       interval: 5s
