@@ -1,11 +1,11 @@
-# Technische Dokumentation
+# Technical Documentation
 
-Dieses Dokument richtet sich an Entwickler und Betreiber. Für einen Überblick über
-Features und die erste Inbetriebnahme siehe [`README.md`](../README.md).
+This document is intended for developers and operators. For a feature overview
+and first-time setup, see [`README.md`](../README.md).
 
 ---
 
-## Architektur
+## Architecture
 
 ```
 frontend (nginx, UI)  ──►  backend (FastAPI, API/WS/Scheduler)
@@ -13,45 +13,44 @@ frontend (nginx, UI)  ──►  backend (FastAPI, API/WS/Scheduler)
                     ┌───────────┼───────────┐
                     ▼           ▼           ▼
                   db     redis (Queue)   worker (RQ, Scans)
-              PostgreSQL       │         (2 parallele Jobs)
+              PostgreSQL       │         (2 parallel jobs)
                                │
-                         überlebt Backend-Neustarts,
-                         abbrechbar
+                         survives backend restarts,
+                         cancelable
 ```
 
-- **Frontend:** React 18 + Vite, wird zu statischem HTML/JS gebaut und von nginx
-  ausgeliefert. TLS wird optional vom nginx-Container terminiert
-  (`EASM_TLS=on|off`).
-- **Backend:** FastAPI + Uvicorn. Verwaltet Config, Scan-Queue, Assets/Findings,
-  Scheduler und Authentifizierung.
-- **Worker:** Separater Container, der über RQ Scan-Jobs aus der Redis-Queue
-  abarbeitet. Damit blockiert ein längerer Scan die API nicht.
-- **PostgreSQL:** Persistente Datenhaltung (Scans, Assets, Findings, Settings,
-  Credentials).
-- **Redis:** Job-Queue für RQ + Pub/Sub für Live-Logs während eines Scans.
+- **Frontend:** React 18 + Vite, built to static HTML/JS and served by nginx.
+  TLS is optionally terminated by the nginx container (`EASM_TLS=on|off`).
+- **Backend:** FastAPI + Uvicorn. Manages config, scan queue, assets/findings,
+  scheduler, and authentication.
+- **Worker:** Separate container processing scan jobs from the Redis queue via
+  RQ, so long scans never block the API.
+- **PostgreSQL:** Persistent storage (scans, assets, findings, settings,
+  credentials).
+- **Redis:** Job queue for RQ + Pub/Sub for live logs during a scan.
 
 ---
 
-## Projektstruktur
+## Project Structure
 
 ```
 easm-ui/
 ├── app/
 │   ├── backend/
-│   │   ├── main.py              # FastAPI — Config, Scan, Results, WebSocket
+│   │   ├── main.py              # FastAPI — config, scan, results, WebSocket
 │   │   ├── auth.py              # DB-backed auth, TOTP, rate-limiting
 │   │   ├── db.py                # SQLAlchemy models (settings, scans, assets, findings)
 │   │   ├── scanner.py           # RQ job: subfinder, httpx, nmap, nuclei
-│   │   ├── requirements.txt     # gepinnte Python-Dependencies
+│   │   ├── requirements.txt     # pinned Python dependencies
 │   │   ├── requirements-dev.txt # pytest, ruff, httpx
-│   │   ├── tests/               # Pytest-Tests
-│   │   └── Dockerfile           # Multi-stage: Go-Tools + Python-Runtime
+│   │   ├── tests/               # pytest tests
+│   │   └── Dockerfile           # multi-stage: Go tools + Python runtime
 │   └── frontend/
 │       ├── src/
 │       │   ├── App.jsx
-│       │   ├── components/      # Sidebar, UserSettingsModal, ui-Primitives
+│       │   ├── components/      # Sidebar, UserSettingsModal, UI primitives
 │       │   ├── views/           # Dashboard, Assets, Scans, Findings, Config, ScanLive
-│       │   └── __tests__/       # Vitest-Tests
+│       │   └── __tests__/       # Vitest tests
 │       ├── eslint.config.js
 │       ├── vitest.config.js
 │       ├── Dockerfile
@@ -60,117 +59,116 @@ easm-ui/
 │   └── run-easm.sh              # Subfinder -> dnsx -> httpx -> nmap -> Nuclei
 ├── .github/workflows/
 │   └── ci.yml                   # lint → test → build (Docker + Trivy + GHCR)
-├── docker-compose.yml           # Produktion: nutzt GHCR-Images
-├── docker-compose.local.yml     # Lokale Entwicklung: baut Images selbst
+├── docker-compose.yml           # Production: uses GHCR images
+├── docker-compose.local.yml     # Local development: builds images locally
 ├── nginx.conf
 ├── pyproject.toml               # ruff config
-├── VERSIONS.md                  # gepinnte Tool-Versionen
+├── VERSIONS.md                  # pinned tool versions
 ├── VERSION.md                   # SemVer
 └── README.md
 ```
 
 ---
 
-## Authentifizierung & Sicherheit
+## Authentication & Security
 
-Das Tool ist ein Single-User-System (Benutzername `admin`).
+The tool is a single-user system (username `admin`).
 
-- **Erststart:** Wenn weder `EASM_ADMIN_PASSWORD` noch `EASM_ADMIN_PASSWORD_HASH`
-  gesetzt sind und noch keine Credentials in der Datenbank existieren, generiert
-  das Backend ein zufälliges Passwort und schreibt es einmalig ins Log:
+- **First start:** If neither `EASM_ADMIN_PASSWORD` nor
+  `EASM_ADMIN_PASSWORD_HASH` is set and no credentials exist in the database,
+  the backend generates a random password and writes it once to the log:
   `docker compose logs backend`.
-- **Passwort setzen:** Über die UI unter **Benutzereinstellungen** (unten links in
-  der Sidebar) oder beim ersten Start über `.env`.
-- **Passwort-Hash erzeugen (für `.env`):**
+- **Set password:** Via the UI under **User Settings** (bottom left in the
+  sidebar) or on first start via `.env`.
+- **Generate password hash (for `.env`):**
   ```bash
   docker compose exec backend python -c \
-    "from argon2 import PasswordHasher; print(PasswordHasher().hash('DEIN_PASSWORT'))"
+    "from argon2 import PasswordHasher; print(PasswordHasher().hash('YOUR_PASSWORD'))"
   ```
-- **TOTP/2FA:** In der UI unter **Benutzereinstellungen → Sicherheit**
-  aktivieren. QR-Code mit einer Authenticator-App scannen (z. B. Google
-  Authenticator, Aegis, Bitwarden) und den Verifizierungscode eingeben.
-  Aktivierung und Deaktivierung erfordern das aktuelle Passwort.
-- **Passwort ändern:** Erfordert das aktuelle Passwort, beendet alle Sitzungen
-  sofort.
-- **Rate-Limit:** 5 Fehlversuche/Minute → 5 Minuten Sperre (IP-basiert).
-- **Sessions:** In-Memory (24 h). Überleben Browser-Reload, aber keinen
-  Backend-Neustart.
-- **Security-Headers:** CSP, X-Frame-Options, X-Content-Type-Options,
+- **TOTP/2FA:** Enable in the UI under **User Settings → Security**. Scan the
+  QR code with an authenticator app (e.g. Google Authenticator, Aegis,
+  Bitwarden) and enter the verification code. Both enabling and disabling
+  require the current password.
+- **Change password:** Requires the current password, terminates all sessions
+  immediately.
+- **Rate limit:** 5 failed attempts/minute → 5 minutes lockout (IP-based).
+- **Sessions:** In-memory (24 h). Survive browser reload but not backend
+  restart.
+- **Security headers:** CSP, X-Frame-Options, X-Content-Type-Options,
   Referrer-Policy, optional HSTS (`EASM_HSTS=on`).
 
 ---
 
-## API-Referenz
+## API Reference
 
-Sämtliche `/api/*`-Endpoints (außer `/api/auth/*`) benötigen ein gültiges
-Session-Cookie.
+All `/api/*` endpoints (except `/api/auth/*`) require a valid session cookie.
 
-| Methode | Endpoint | Beschreibung |
+| Method | Endpoint | Description |
 |---|---|---|
-| POST | `/api/auth/login` | Login (`password`, optional `code` bei TOTP) |
+| POST | `/api/auth/login` | Login (`password`, optional `code` for TOTP) |
 | POST | `/api/auth/logout` | Logout |
-| GET | `/api/auth/check` | Auth-Status (`authenticated`, `totp_enabled`) |
-| GET | `/api/auth/user` | Aktueller Benutzer (`username`, `totp_enabled`) |
-| POST | `/api/auth/change-password` | Passwort ändern (benötigt `current_password`) |
-| POST | `/api/auth/totp/setup` | 2FA-Setup starten (gibt `secret` + `qr_uri`) |
-| POST | `/api/auth/totp/verify` | 2FA mit Verifizierungscode aktivieren |
-| POST | `/api/auth/totp/disable` | 2FA deaktivieren |
-| GET | `/api/domains` | Konfigurierte Targets (Auth erforderlich) |
-| GET | `/api/config` | Konfiguration (Targets, Notifications, Scheduler) |
-| POST | `/api/config` | Konfiguration speichern |
-| POST | `/api/scan/trigger` | Manuellen Scan starten |
-| POST | `/api/scan/cancel` | Laufenden Scan abbrechen |
-| GET | `/api/scan/status` | Status des aktuellen Scans |
-| GET | `/api/scans` | Letzte 30 Scans |
-| GET | `/api/scans/{date}` | Rohdaten eines Scans |
-| GET | `/api/scans/{date}/findings` | Findings eines Scans (filterbar nach severity/domain) |
-| GET | `/api/assets` | Assets des letzten Scans (paginiert, filterbar, durchsuchbar) |
-| GET | `/api/stats/overview` | Dashboard-Aggregat (Score, Metriken, Deltas, Trends) |
-| GET | `/api/findings/open` | Offene Findings (filterbar nach domain/severity) |
-| GET | `/api/changes/latest` | Neue Assets/Findings seit letztem Scan |
-| WS | `/ws/scan` | Live-Log via WebSocket |
-| POST | `/api/notify/test` | Test-Mail senden |
+| GET | `/api/auth/check` | Auth status (`authenticated`, `totp_enabled`) |
+| GET | `/api/auth/user` | Current user (`username`, `totp_enabled`) |
+| POST | `/api/auth/change-password` | Change password (requires `current_password`) |
+| POST | `/api/auth/totp/setup` | Start 2FA setup (returns `secret` + `qr_uri`) |
+| POST | `/api/auth/totp/verify` | Activate 2FA with verification code |
+| POST | `/api/auth/totp/disable` | Disable 2FA |
+| GET | `/api/domains` | Configured targets (auth required) |
+| GET | `/api/config` | Configuration (targets, notifications, scheduler) |
+| POST | `/api/config` | Save configuration |
+| POST | `/api/scan/trigger` | Start a manual scan |
+| POST | `/api/scan/cancel` | Cancel the running scan |
+| GET | `/api/scan/status` | Current scan status |
+| GET | `/api/scans` | Last 30 scans |
+| GET | `/api/scans/{date}` | Raw data of a scan |
+| GET | `/api/scans/{date}/findings` | Findings of a scan (filterable by severity/domain) |
+| GET | `/api/assets` | Assets of the latest scan (paginated, filterable, searchable) |
+| GET | `/api/stats/overview` | Dashboard aggregate (score, metrics, deltas, trends) |
+| GET | `/api/findings/open` | Open findings (filterable by domain/severity) |
+| GET | `/api/changes/latest` | New assets/findings since the last scan |
+| WS | `/ws/scan` | Live log via WebSocket |
+| POST | `/api/notify/test` | Send test email |
 
 ---
 
 ## Deployment
 
-### Produktion (GHCR-Images)
+### Production (GHCR Images)
 
-Die CI baut bei jedem Push auf `main` Images und pushed sie nach GHCR. Die
-Produktions-Compose erwartet ein sicheres Datenbank-Passwort.
+CI builds and pushes images to GHCR on every push to `main`. The production
+compose requires a secure database password.
 
 ```bash
 cp .env.example .env
-# EASM_DB_PASSWORD setzen (mindestens)
+# Set EASM_DB_PASSWORD (minimum)
 echo "EASM_DB_PASSWORD=$(openssl rand -hex 32)" >> .env
 
 docker compose pull
 docker compose up -d
 ```
 
-Frontend lauscht auf den Standard-Ports `80` und `443`. Für ein anderes
-Registry/Tag können die Umgebungsvariablen `EASM_IMAGE_REGISTRY`,
-`EASM_IMAGE_REPO` und `EASM_IMAGE_TAG` verwendet werden.
+Frontend listens on standard ports `80` and `443`. To use a different
+registry or tag, set `EASM_IMAGE_REGISTRY`, `EASM_IMAGE_REPO`, and
+`EASM_IMAGE_TAG`.
 
-### Lokale Entwicklung (selbst bauen)
+### Local Development (Build Locally)
 
 ```bash
 docker compose -f docker-compose.local.yml up --build
 ```
 
-Frontend und API sind unter `http://localhost:3000` bzw.
-`https://localhost:3443` erreichbar. Der erste Build dauert 5–10 Minuten, weil
-Go-Tools kompiliert und Nuclei-Templates geladen werden.
+Frontend and API are available at `http://localhost:3000` and
+`https://localhost:3443`. The first build takes 5–10 minutes because Go
+tools compile and Nuclei templates download.
 
 ---
 
-## Entwicklung
+## Development
 
 ### Backend (Tests + Linting)
 
 ```bash
-# Postgres/Redis müssen laufen (docker compose up db redis -d)
+# Postgres/Redis must be running (docker compose up db redis -d)
 cd app/backend
 pip install -r requirements.txt -r requirements-dev.txt
 alembic upgrade head
@@ -185,26 +183,26 @@ cd app/frontend
 npm install
 npm test          # vitest
 npm run lint      # eslint
-npm run build     # Produktion
-npm run dev       # Dev-Server mit HMR
+npm run build     # production build
+npm run dev       # dev server with HMR
 ```
 
 ---
 
-## Konfiguration
+## Configuration
 
-Alle wichtigen Einstellungen werden über die UI oder `.env` vorgenommen.
-Details stehen in `.env.example`. Wichtige Variablen:
+All important settings are managed via the UI or `.env`. See `.env.example`
+for details. Key variables:
 
-- `EASM_ADMIN_PASSWORD` / `EASM_ADMIN_PASSWORD_HASH` — Ersteinrichtung.
-- `EASM_DB_PASSWORD` — PostgreSQL-Passwort (in Produktion Pflicht).
-- `EASM_TLS=on|off` — HTTPS im Frontend-Container aktivieren/deaktivieren.
-- `EASM_TLS_SAN` — Subject Alternative Names für das Self-Signed-Cert.
-- `EASM_HSTS=on|off` — HSTS-Header (nur hinter einem Reverse-Proxy empfohlen).
-- `TZ` — Zeitzone für den Cron-Scheduler.
+- `EASM_ADMIN_PASSWORD` / `EASM_ADMIN_PASSWORD_HASH` — initial setup.
+- `EASM_DB_PASSWORD` — PostgreSQL password (required in production).
+- `EASM_TLS=on|off` — enable/disable HTTPS in the frontend container.
+- `EASM_TLS_SAN` — Subject Alternative Names for the self-signed cert.
+- `EASM_HSTS=on|off` — HSTS header (recommended only behind a reverse proxy).
+- `TZ` — timezone for the cron scheduler.
 
-Gepinnte Versionen aller Tools, Images und Pakete sind in [`VERSIONS.md`](../VERSIONS.md)
-dokumentiert.
+Pinned versions for all tools, images, and packages are documented in
+[`VERSIONS.md`](../VERSIONS.md).
 
 ---
 
@@ -212,9 +210,8 @@ dokumentiert.
 
 `.github/workflows/ci.yml`:
 
-1. `lint` — `ruff check` (Backend) und `eslint` (Frontend).
-2. `test` — `pytest` (Backend mit PostgreSQL-Service) und `vitest` (Frontend).
-3. `build` — Docker-Images bauen, nach GHCR pushen, Trivy-Scan
-   (CRITICAL/HIGH) laufen lassen.
+1. `lint` — `ruff check` (backend) and `eslint` (frontend).
+2. `test` — `pytest` (backend with PostgreSQL service) and `vitest` (frontend).
+3. `build` — Docker image build, push to GHCR, Trivy scan (CRITICAL/HIGH).
 
-`build` wird nur auf `main` ausgeführt und benötigt `packages: write`.
+`build` only runs on `main` and requires `packages: write`.
