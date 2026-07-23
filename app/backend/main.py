@@ -21,11 +21,13 @@ import notify
 from db import (
     Asset,
     AssetTracker,
+    Base,
     Finding,
     FindingTracker,
     Scan,
     SessionLocal,
     Setting,
+    engine,
     utcnow,
 )
 from scanqueue import REDIS_URL, live_channel, log_key, redis_conn, scan_queue, stop_key
@@ -72,7 +74,12 @@ def next_scheduled_run() -> Optional[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    subprocess.run(["alembic", "upgrade", "head"], cwd="/app", check=True)
+    # In Docker (WORKDIR /app) alembic migrations are available; in CI/tests
+    # create tables directly from metadata to avoid hardcoded /app paths.
+    if os.path.isfile("/app/alembic.ini"):
+        subprocess.run(["alembic", "upgrade", "head"], cwd="/app", check=True)
+    else:
+        await asyncio.to_thread(Base.metadata.create_all, bind=engine)
     imported = await asyncio.to_thread(
         ingest.import_legacy_results, load_config().get("targets", [])
     )
