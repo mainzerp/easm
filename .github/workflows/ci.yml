@@ -64,9 +64,14 @@ jobs:
       - name: Install Python deps
         run: pip install -r requirements.txt -r requirements-dev.txt
         working-directory: app/backend
+      - name: Debug env
+        run: python -c "import os; print('DB URL:', os.environ.get('DATABASE_URL', 'MISSING'))"
+        working-directory: app/backend
       - name: Run migrations
         run: python -m alembic upgrade head
         working-directory: app/backend
+        env:
+          DATABASE_URL: postgresql+psycopg://easm:easm@localhost:5432/easm_test
       - name: Run pytest
         run: python -m pytest tests/ -v
         working-directory: app/backend
