@@ -1,8 +1,17 @@
 # Version
 
-Current version: 0.2.0
+Current version: 0.3.0
 
 ## Version History
+
+### 0.3.0 - 2026-07-23
+- Added pytest test suite for backend auth endpoints.
+- Added vitest test suite for frontend components.
+- Added ruff (Python) and eslint (JS) linting configurations.
+- Added GitHub Actions workflows: quality (ruff+eslint), test (pytest+vitest), build (Docker+Trivy+GHCR).
+- Added CI/CD status badges to README.
+- Revised README with architecture diagram, development section, and improved structure.
+- Container images are published to `ghcr.io/mainzerp/easm-backend` and `ghcr.io/mainzerp/easm-frontend`.
 
 ### 0.2.0 - 2026-07-22
 - Added User Settings modal for admin password change and TOTP enable/disable.

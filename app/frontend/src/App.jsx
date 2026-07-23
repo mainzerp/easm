@@ -52,7 +52,7 @@ export default function App() {
   }
 
   async function handleLogout() {
-    try { await window.fetch('/api/auth/logout', { method: 'POST' }) } catch {}
+    try { await window.fetch('/api/auth/logout', { method: 'POST' }) } catch { /* ignore network errors */ }
     setAuthState(a => ({ authenticated: false, totp_enabled: a?.totp_enabled ?? false }))
   }
 

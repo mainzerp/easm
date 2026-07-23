@@ -43,7 +43,7 @@ export function Btn({ children, onClick, variant = 'default', size = 'md', disab
 }
 
 /* ── Stat card (Referenz-Stil: Label, große Zahl, optional Delta) ─────────── */
-export function StatCard({ label, value, delta, deltaGood = true, icon, href, onClick }) {
+export function StatCard({ label, value, delta, deltaGood = true, icon, onClick }) {
   return (
     <div className="card" onClick={onClick}
       style={{ padding: '16px 18px', cursor: onClick ? 'pointer' : 'default' }}>

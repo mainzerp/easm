@@ -182,7 +182,6 @@ export default function ScanLive({ onNav, scanTarget }) {
               {STEPS.map((step, i) => {
                 const past    = i < currentStep
                 const current = i === currentStep
-                const future  = i > currentStep
                 return (
                   <div key={step} style={{
                     display: 'flex', alignItems: 'center', gap: 4,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Topbar, Content, SectionHead, Empty, Badge } from '../components/ui.jsx'
+import { Topbar, Content, SectionHead, Empty } from '../components/ui.jsx'
 
-export default function Scans({ onNav }) {
+export default function Scans() {
   const [scans, setScans]     = useState([])
   const [selected, setSelected] = useState(null)
   const [detail, setDetail]   = useState(null)
@@ -38,7 +38,6 @@ export default function Scans({ onNav }) {
       .then(setDetail)
   }, [selected])
 
-  const colStyle = { fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }
   const FILES = ['subdomains.txt', 'http-results.txt', 'ports.txt', 'vulns.txt']
 
   return (
