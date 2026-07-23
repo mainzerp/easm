@@ -53,6 +53,7 @@ easm-ui/
 │       │   └── __tests__/       # Vitest tests
 │       ├── eslint.config.js
 │       ├── vitest.config.js
+│       ├── nginx.conf
 │       ├── Dockerfile
 │       └── package.json
 ├── scripts/
@@ -61,7 +62,6 @@ easm-ui/
 │   └── ci.yml                   # lint → test → build (Docker + Trivy + GHCR)
 ├── docker-compose.yml           # Production: uses GHCR images
 ├── docker-compose.local.yml     # Local development: builds images locally
-├── nginx.conf
 ├── pyproject.toml               # ruff config
 ├── VERSIONS.md                  # pinned tool versions
 ├── VERSION.md                   # SemVer

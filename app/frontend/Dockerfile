@@ -10,7 +10,7 @@ RUN npm run build
 FROM nginx:1.31-alpine
 RUN apk add --no-cache openssl
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY tls.conf /etc/nginx/easm-tls.conf
 COPY docker-entrypoint.d/40-easm-tls.sh /docker-entrypoint.d/40-easm-tls.sh
 RUN chmod +x /docker-entrypoint.d/40-easm-tls.sh
-# nginx config (default.conf) is mounted via docker-compose volume

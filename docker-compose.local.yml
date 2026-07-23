@@ -89,7 +89,6 @@ services:
     container_name: easm-frontend
     restart: unless-stopped
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - easm-tls:/etc/nginx/tls
     environment:
       - EASM_TLS=${EASM_TLS:-on}
