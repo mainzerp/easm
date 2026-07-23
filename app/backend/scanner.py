@@ -61,7 +61,7 @@ def run_scan_job(scan_id: int) -> None:
         if not scan:
             return
         if redis_conn.exists(stop_key(scan_id)):
-            _finish(session, scan, "canceled", "Abgebrochen vor Start")
+            _finish(session, scan, "canceled", "Canceled before start")
             redis_conn.delete(stop_key(scan_id))
             redis_conn.publish(live_channel(scan_id), "__DONE__")
             return
@@ -98,8 +98,8 @@ def run_scan_job(scan_id: int) -> None:
             proc.wait()
 
         if canceled:
-            _finish(session, scan, "canceled", "Abgebrochen durch Benutzer")
-            _publish("[canceled] Scan abgebrochen.", scan_id)
+            _finish(session, scan, "canceled", "Canceled by user")
+            _publish("[canceled] Scan canceled.", scan_id)
         elif proc.returncode == 0:
             _finish(session, scan, "done")
             changes = ingest.ingest_scan(session, scan, out, domains)

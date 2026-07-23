@@ -58,17 +58,17 @@ def _notify_channels(cfg: dict, subject: str, body: str) -> None:
     if smtp_configured(cfg):
         try:
             send_mail(cfg, subject, body)
-            print(f"EASM Notify: Mail gesendet ({subject})", flush=True)
+            print(f"EASM Notify: Mail sent ({subject})", flush=True)
         except Exception as e:
             errors.append(f"SMTP: {e}")
     if cfg.get("discord_webhook"):
         try:
             send_discord(cfg, f"**{subject}**\n```\n{body}\n```")
-            print(f"EASM Notify: Discord gesendet ({subject})", flush=True)
+            print(f"EASM Notify: Discord sent ({subject})", flush=True)
         except Exception as e:
             errors.append(f"Discord: {e}")
     for err in errors:
-        print(f"EASM Notify FEHLER: {err}", flush=True)
+        print(f"EASM Notify ERROR: {err}", flush=True)
 
 
 def notify_scan_changes(cfg: dict, changes: dict, targets: list[str], date: str) -> None:
@@ -78,20 +78,20 @@ def notify_scan_changes(cfg: dict, changes: dict, targets: list[str], date: str)
 
     if "new_asset" in notify_on and changes.get("new_assets"):
         new_assets = changes["new_assets"]
-        body = "Neue Assets entdeckt:\n\n" + "\n".join(new_assets)
-        _notify_channels(cfg, f"[EASM] {len(new_assets)} neue Assets — {target_desc}", body)
+        body = "New assets discovered:\n\n" + "\n".join(new_assets)
+        _notify_channels(cfg, f"[EASM] {len(new_assets)} new assets — {target_desc}", body)
 
     if "new_vuln" in notify_on and changes.get("new_findings"):
         new_vulns = changes["new_findings"]
-        body = "Neue Findings:\n\n" + "\n".join(new_vulns)
-        _notify_channels(cfg, f"[EASM] {len(new_vulns)} neue Findings — {target_desc}", body)
+        body = "New findings:\n\n" + "\n".join(new_vulns)
+        _notify_channels(cfg, f"[EASM] {len(new_vulns)} new findings — {target_desc}", body)
 
 
 def notify_scan_failed(cfg: dict, target_desc: str, reason: str) -> None:
     if "scan_failed" not in cfg.get("notify_on", []):
         return
-    body = f"Der Scan ist fehlgeschlagen.\n\nZiel: {target_desc}\nGrund: {reason}"
-    _notify_channels(cfg, f"[EASM] Scan fehlgeschlagen — {target_desc}", body)
+    body = f"The scan failed.\n\nTarget: {target_desc}\nReason: {reason}"
+    _notify_channels(cfg, f"[EASM] Scan failed — {target_desc}", body)
 
 
 def send_test_mail(cfg: dict) -> None:

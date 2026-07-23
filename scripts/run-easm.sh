@@ -43,7 +43,7 @@ if [ "$ENABLE_HTTPX" = "true" ]; then
   COUNT=$(wc -l < "$OUT/http-results.txt" 2>/dev/null || echo 0)
   log "  Found $COUNT live HTTP services"
 else
-  log "[3/5] httpx – deaktiviert (enable_httpx=false), übersprungen"
+  log "[3/5] httpx — disabled (enable_httpx=false), skipped"
 fi
 
 # Extract clean URL list for nuclei (httpx output: "https://host [200] [tech]")
@@ -61,7 +61,7 @@ if [ "$ENABLE_NMAP" = "true" ]; then
     log "  No resolved hosts – skipping port scan"
   fi
 else
-  log "[4/5] nmap – deaktiviert (enable_nmap=false), übersprungen"
+  log "[4/5] nmap — disabled (enable_nmap=false), skipped"
 fi
 
 # 5. Nuclei
@@ -77,9 +77,9 @@ if [ "$ENABLE_NUCLEI" = "true" ]; then
     log "  No HTTP targets – skipping Nuclei"
   fi
 else
-  log "[5/5] Nuclei – deaktiviert (enable_nuclei=false), übersprungen"
+  log "[5/5] Nuclei — disabled (enable_nuclei=false), skipped"
 fi
 
-# Diff, Benachrichtigung und Baseline-Ablage übernimmt das Backend (notify.py)
+# Diff, notifications, and baseline storage are handled by the backend (notify.py)
 
 log "=== Scan complete. Results: $OUT ==="

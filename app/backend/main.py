@@ -46,7 +46,7 @@ async def scheduled_scan():
     if scan is None:
         print("EASM Scheduler: A scan is already running — scheduled run skipped.", flush=True)
     else:
-        print(f"EASM Scheduler: Geplanter Scan eingereiht ({scan.date}).", flush=True)
+        print(f"EASM Scheduler: Scheduled scan enqueued ({scan.date}).", flush=True)
 
 
 def apply_schedule():
@@ -477,9 +477,9 @@ class ScanRequest(BaseModel):
 
 @app.post("/api/scan/trigger")
 def trigger_scan(req: ScanRequest):
-    domains = [req.target] if req.target else load_config().get("targets", [])
+    domains = load_config().get("targets", []) if not req.target or req.target == "__all__" else [req.target]
     if not domains:
-        raise HTTPException(status_code=400, detail="Keine Targets konfiguriert.")
+        raise HTTPException(status_code=400, detail="No targets configured.")
     scan, overlap = _enqueue_scan(domains, "manual")
     if scan is None:
         return {"status": "domain_conflict", "domains": overlap}
