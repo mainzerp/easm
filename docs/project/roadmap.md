@@ -138,17 +138,21 @@ Legend: Effort S = small (< 0.5 days), M = medium (0.5–1.5 days), L = large (2
 - **Extensibility:** New tools (e.g., katana, naabu, uncover) can be added by
   defining a registry entry (command template, output parser, phase name) and
   rebuilding the image. The UI automatically reflects new phases.
-- **Remote log access:** Scan logs (currently stored in Redis with a 24 h TTL)
-  are exposed via a new API endpoint (`GET /api/scans/{date}/log`) so they can be
-  reviewed even after the WebSocket connection closes. Past scan logs are
-  fetched from the results directory on disk. A log viewer panel in the Scan
-  detail view lets operators debug issues without accessing the server directly.
-  Worker-level logs (RQ job output, tool stderr) are also captured and
-  retrievable through the same endpoint.
+- **Remote log access:** All service logs are accessible from the UI to simplify
+  debugging without server access. The backend exposes log endpoints
+  (`GET /api/logs/{service}` for `backend`, `worker`, `frontend`, `db`,
+  `redis`) that stream log output from the running containers via Docker API
+  (container labels opt services into log collection). Past scan logs are
+  fetched from Redis (current) and from the results directory on disk
+  (historical, via `GET /api/scans/{date}/log`). A log viewer page in the UI
+  under "Logs" lets operators select a service, filter by time range and
+  severity, and tail live output. Combined log view shows all services
+  interleaved by timestamp, making cross-service debugging (e.g. "did the
+  worker receive the job? did the DB reject the query?") straightforward.
 - Acceptance: A scan shows per-phase progress in real time; adding a new tool is a
   config-only change; live phase counters update as the scan runs; pipeline
-  timeline clears on scan completion; past scan logs are viewable from the UI
-  without server access.
+  timeline clears on scan completion; all service logs are viewable from the UI
+  with filtering and live tail.
 
 **Phase 5 result:** Modular, extensible scan engine with real-time per-phase progress visible in the UI.
 ---
