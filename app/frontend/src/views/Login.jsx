@@ -25,11 +25,11 @@ export default function Login({ totpEnabled, onLogin }) {
       })
       if (res.ok) { onLogin(); return }
       const data = await res.json().catch(() => ({}))
-      if (res.status === 429) setError(data.detail || 'Zu viele Versuche — bitte später erneut probieren.')
-      else if (data.detail === 'totp_required') setError('Bitte 2FA-Code eingeben.')
-      else setError(data.detail || 'Login fehlgeschlagen.')
+      if (res.status === 429) setError(data.detail || 'Too many attempts — please try again later.')
+      else if (data.detail === 'totp_required') setError('Please enter your 2FA code.')
+      else setError(data.detail || 'Login failed.')
     } catch {
-      setError('Verbindung zum Server fehlgeschlagen.')
+      setError('Server connection failed.')
     } finally {
       setLoading(false)
     }
@@ -52,13 +52,13 @@ export default function Login({ totpEnabled, onLogin }) {
         </div>
 
         <input
-          type="password" placeholder="Passwort" autoFocus
+          type="password" placeholder="Password" autoFocus
           value={password} onChange={e => setPassword(e.target.value)}
           style={inputStyle}
         />
         {totpEnabled && (
           <input
-            type="text" placeholder="2FA-Code" inputMode="numeric" autoComplete="one-time-code"
+            type="text" placeholder="2FA Code" inputMode="numeric" autoComplete="one-time-code"
             value={code} onChange={e => setCode(e.target.value)}
             style={{ ...inputStyle, fontFamily: 'var(--font-mono)', letterSpacing: '0.2em' }}
           />
@@ -77,7 +77,7 @@ export default function Login({ totpEnabled, onLogin }) {
             opacity: loading || !password ? 0.5 : 1,
           }}
         >
-          {loading ? 'Prüfe...' : 'Anmelden'}
+          {loading ? 'Checking...' : 'Login'}
         </button>
       </form>
     </div>

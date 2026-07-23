@@ -66,7 +66,7 @@ export default function Scans() {
       </Topbar>
       <Content>
         {loading ? <Empty icon="ti-loader" text="Lade Scans..." /> : scans.length === 0 ? (
-          <Empty icon="ti-history" text="Noch keine Scans — starte den ersten über das Dashboard" />
+          <Empty icon="ti-history" text="No scans yet — start the first one from the Dashboard" />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16, height: '100%' }}>
 

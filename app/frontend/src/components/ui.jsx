@@ -42,7 +42,7 @@ export function Btn({ children, onClick, variant = 'default', size = 'md', disab
   )
 }
 
-/* ── Stat card (Referenz-Stil: Label, große Zahl, optional Delta) ─────────── */
+/* ── Stat card (label, large value, optional delta) ──────────────────────────── */
 export function StatCard({ label, value, delta, deltaGood = true, icon, onClick }) {
   return (
     <div className="card" onClick={onClick}
@@ -87,7 +87,7 @@ export function Badge({ sev, children }) {
   )
 }
 
-/* ── Soft chip (sanfte Farbe, für Counts) ─────────────────────────────────── */
+/* ── Soft chip (subtle color, for counts) ──────────────────────────────────── */
 export function SoftChip({ sev = 'info', children }) {
   return (
     <span style={{
@@ -200,7 +200,7 @@ export function Modal({ open, onClose, title, children }) {
           <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{title}</span>
           <button
             onClick={onClose}
-            aria-label="Schließen"
+            aria-label="Close"
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 28, height: 28, borderRadius: 7,

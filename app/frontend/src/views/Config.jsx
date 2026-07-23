@@ -75,7 +75,7 @@ export default function Config() {
                 onChange={e => setNewTarget(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addTarget()}
               />
-              <Btn onClick={addTarget}><i className="ti ti-plus" aria-hidden />Hinzufügen</Btn>
+              <Btn onClick={addTarget}><i className="ti ti-plus" aria-hidden />Add</Btn>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {cfg.targets.map(t => (
@@ -99,7 +99,7 @@ export default function Config() {
             <input style={inputStyle} value={cfg.schedule}
               onChange={e => setCfg(c => ({ ...c, schedule: e.target.value }))} />
             <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
-              Standard: <code style={{ color: 'var(--teal)' }}>0 3 * * *</code> = täglich 03:00 Uhr
+              Default: <code style={{ color: 'var(--teal)' }}>0 3 * * *</code> = daily at 03:00
             </div>
           </div>
 
@@ -120,9 +120,9 @@ export default function Config() {
               </label>
             ))}
             <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>
-              Phasen deaktivieren, wenn lokale Security-Software (ESET, IDS) dadurch
-              ausgelöst wird und den PC sperrt. Subfinder + dnsx (reines DNS) laufen
-              immer und lösen praktisch keine IDS aus.
+              Disable phases if local security software (ESET, IDS) is triggered
+              and locks the PC. Subfinder + dnsx (pure DNS) always run and
+              virtually never trigger an IDS.
             </div>
           </div>
 
@@ -190,7 +190,7 @@ export default function Config() {
                   onChange={e => setCfg(c => ({ ...c, smtp_from: e.target.value }))} />
               </div>
               <div>
-                <label style={labelStyle}>Verschlüsselung</label>
+                <label style={labelStyle}>Encryption</label>
                 <select
                   style={{ ...inputStyle, cursor: 'pointer' }}
                   value={cfg.smtp_tls ?? 'starttls'}
@@ -202,7 +202,7 @@ export default function Config() {
                 </select>
               </div>
             </div>
-            <label style={labelStyle}>Empfänger (kommagetrennt)</label>
+            <label style={labelStyle}>Recipients (comma-separated)</label>
             <input style={{ ...inputStyle, marginBottom: 10 }} placeholder="admin@example.com"
               value={cfg.smtp_to ?? ''}
               onChange={e => setCfg(c => ({ ...c, smtp_to: e.target.value }))} />

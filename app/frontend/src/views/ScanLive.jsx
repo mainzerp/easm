@@ -81,7 +81,7 @@ export default function ScanLive({ onNav, scanTarget }) {
       .then(r => r.json())
       .then(res => {
         if (res.status === 'domain_conflict') {
-          setLog(prev => [...prev, `[conflict] Scan für ${res.domains?.join(', ')} läuft bereits`])
+          setLog(prev => [...prev, `[conflict] Scan for ${res.domains?.join(', ')} is already running`])
         }
         connectWs()
       })
@@ -113,7 +113,7 @@ export default function ScanLive({ onNav, scanTarget }) {
       </Topbar>
 
       <Content>
-        {/* Target selector (nur wenn kein Scan läuft) */}
+        {/* Target selector (only when no scan is running) */}
         {!running && !done && (
           <div style={{ maxWidth: 500, marginBottom: 24 }}>
             <SectionHead>Ziel</SectionHead>

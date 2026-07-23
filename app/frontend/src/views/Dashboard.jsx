@@ -45,20 +45,20 @@ export default function Dashboard({ onNav, onStartScan }) {
       <Topbar title="Dashboard">
         {scanStatus.next_run && !scanStatus.running && (
           <span style={{ fontSize: 12, color: 'var(--text3)', marginRight: 4 }}>
-            Nächster Scan: {new Date(scanStatus.next_run).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+            Next scan: {new Date(scanStatus.next_run).toLocaleString('en-US', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
           </span>
         )}
         {config.targets?.length > 0 && (
           <Btn onClick={() => onStartScan(config.targets.length > 1 ? '__all__' : config.targets[0])} variant="primary" disabled={scanStatus.running}>
             <i className="ti ti-player-play" aria-hidden />
-            {scanStatus.running ? 'Scan läuft...' : 'Jetzt scannen'}
+            {scanStatus.running ? 'Scanning...' : 'Scan now'}
           </Btn>
         )}
       </Topbar>
 
       <Content>
         {loading ? (
-          <Empty icon="ti-loader" text="Lade Daten..." />
+          <Empty icon="ti-loader" text="Loading data..." />
         ) : (
           <>
             {/* ── Row 1: Score + Kernmetriken ─────────────────────────────── */}
@@ -92,7 +92,7 @@ export default function Dashboard({ onNav, onStartScan }) {
               }}>
                 <i className="ti ti-alert-triangle" style={{ color: 'var(--sev-critical-fg)', fontSize: 17 }} aria-hidden />
                 <span style={{ color: 'var(--sev-critical-fg)', fontWeight: 600 }}>{sev.critical} kritische{sev.critical > 1 ? '' : 's'} Finding{sev.critical > 1 ? 's' : ''} offen</span>
-                <span style={{ color: 'var(--text2)' }}>— sofortige Maßnahmen erforderlich</span>
+                <span style={{ color: 'var(--text2)' }}>— immediate action required</span>
                 <Btn size="sm" onClick={() => onNav('findings')} style={{ marginLeft: 'auto' }}>
                   Details <i className="ti ti-arrow-right" aria-hidden />
                 </Btn>
@@ -212,7 +212,7 @@ export default function Dashboard({ onNav, onStartScan }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20 }}>
                 <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--teal)', animation: 'pulse 1.8s ease-in-out infinite' }} />
                 <span style={{ fontSize: 12, color: 'var(--text2)' }}>
-                  Scan läuft: {scanStatus.target} —
+                  Scanning: {scanStatus.target} —
                   <span style={{ color: 'var(--link)', cursor: 'pointer', marginLeft: 4 }} onClick={() => onNav('scan')}>
                     Live-Log ansehen
                   </span>

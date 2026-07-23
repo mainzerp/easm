@@ -28,11 +28,11 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
     e.preventDefault()
     setPwMsg('')
     if (newPw !== confPw) {
-      setPwMsg('Die neuen Passwörter stimmen nicht überein.')
+      setPwMsg('Passwords do not match.')
       return
     }
     if (!newPw) {
-      setPwMsg('Neues Passwort darf nicht leer sein.')
+      setPwMsg('New password must not be empty.')
       return
     }
     setPwLoading(true)
@@ -43,14 +43,14 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
         body: JSON.stringify({ current_password: curPw, new_password: newPw }),
       })
       if (res.ok) {
-        setPwMsg('Passwort geändert. Bitte erneut anmelden.')
+        setPwMsg('Password changed. Please log in again.')
         setTimeout(() => { onClose(); onLogout() }, 1200)
         return
       }
       const data = await res.json().catch(() => ({}))
-      setPwMsg(data.detail || 'Änderung fehlgeschlagen.')
+      setPwMsg(data.detail || 'Change failed.')
     } catch {
-      setPwMsg('Verbindung zum Server fehlgeschlagen.')
+      setPwMsg('Server connection failed.')
     } finally {
       setPwLoading(false)
     }
@@ -69,12 +69,12 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
         setSetup(data)
-        setSetupMsg('QR-Code scannen und Verifizierungscode eingeben.')
+        setSetupMsg('Scan the QR code and enter the verification code.')
       } else {
-        setSetupMsg(data.detail || 'Setup fehlgeschlagen.')
+        setSetupMsg(data.detail || 'Setup failed.')
       }
     } catch {
-      setSetupMsg('Verbindung zum Server fehlgeschlagen.')
+      setSetupMsg('Server connection failed.')
     } finally {
       setSetupLoading(false)
     }
@@ -95,13 +95,13 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
         setSetup(null)
         setSetupCurPw('')
         setVerifyCode('')
-        setSetupMsg('2FA aktiviert.')
+        setSetupMsg('2FA enabled.')
         onToggled()
       } else {
-        setSetupMsg(data.detail || 'Verifizierung fehlgeschlagen.')
+        setSetupMsg(data.detail || 'Verification failed.')
       }
     } catch {
-      setSetupMsg('Verbindung zum Server fehlgeschlagen.')
+      setSetupMsg('Server connection failed.')
     } finally {
       setSetupLoading(false)
     }
@@ -121,13 +121,13 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
       if (res.ok) {
         setDisCurPw('')
         setDisCode('')
-        setDisMsg('2FA deaktiviert.')
+        setDisMsg('2FA disabled.')
         onToggled()
       } else {
-        setDisMsg(data.detail || 'Deaktivierung fehlgeschlagen.')
+        setDisMsg(data.detail || 'Disable failed.')
       }
     } catch {
-      setDisMsg('Verbindung zum Server fehlgeschlagen.')
+      setDisMsg('Server connection failed.')
     } finally {
       setDisLoading(false)
     }
@@ -149,19 +149,19 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
   )
 
   return (
-    <Modal open={open} onClose={onClose} title="Benutzereinstellungen">
+    <Modal open={open} onClose={onClose} title="User Settings">
       <div style={{
         display: 'flex', gap: 6,
         background: 'var(--bg3)', padding: 4, borderRadius: 9, marginBottom: 20,
       }}>
         {tabBtn('account', 'Account')}
-        {tabBtn('security', 'Sicherheit')}
+        {tabBtn('security', 'Security')}
       </div>
 
       {tab === 'account' && (
         <form onSubmit={changePassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>Benutzername</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>Username</label>
             <div style={{
               padding: '10px 12px', fontSize: 14,
               background: 'var(--bg3)', border: '0.5px solid var(--border2)',
@@ -169,22 +169,22 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
             }}>admin</div>
           </div>
 
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginTop: 4 }}>Passwort ändern</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginTop: 4 }}>Change Password</div>
           <Input
-            type="password" placeholder="Aktuelles Passwort"
+            type="password" placeholder="Current password"
             value={curPw} onChange={e => setCurPw(e.target.value)}
           />
           <Input
-            type="password" placeholder="Neues Passwort"
+            type="password" placeholder="New password"
             value={newPw} onChange={e => setNewPw(e.target.value)}
           />
           <Input
-            type="password" placeholder="Neues Passwort bestätigen"
+            type="password" placeholder="Confirm new password"
             value={confPw} onChange={e => setConfPw(e.target.value)}
           />
-          {pwMsg && <div style={{ fontSize: 12, color: pwMsg.includes('geändert') || pwMsg.includes('aktiviert') || pwMsg.includes('deaktiviert') ? 'var(--green)' : '#f85149', lineHeight: 1.5 }}>{pwMsg}</div>}
+          {pwMsg && <div style={{ fontSize: 12, color: pwMsg.includes('changed') || pwMsg.includes('enabled') || pwMsg.includes('disabled') ? 'var(--green)' : '#f85149', lineHeight: 1.5 }}>{pwMsg}</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Btn type="submit" variant="primary" disabled={pwLoading || !curPw || !newPw || !confPw}>Passwort ändern</Btn>
+            <Btn type="submit" variant="primary" disabled={pwLoading || !curPw || !newPw || !confPw}>Change Password</Btn>
           </div>
         </form>
       )}
@@ -196,9 +196,9 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
             padding: '12px 14px', background: 'var(--bg3)', borderRadius: 'var(--radius)',
           }}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Zwei-Faktor-Authentifizierung</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Two-Factor Authentication</div>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
-                {totpEnabled ? 'Aktiviert' : 'Deaktiviert'}
+                {totpEnabled ? 'Enabled' : 'Disabled'}
               </div>
             </div>
             <div style={{
@@ -210,15 +210,15 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
           {!totpEnabled && !setup && (
             <form onSubmit={startTotpSetup} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.5 }}>
-                Aktiviert 2FA mit einer Authenticator-App (z. B. Google Authenticator, Aegis, Bitwarden).
+                Enable 2FA with an authenticator app (e.g., Google Authenticator, Aegis, Bitwarden).
               </div>
               <Input
-                type="password" placeholder="Aktuelles Passwort"
+                type="password" placeholder="Current password"
                 value={setupCurPw} onChange={e => setSetupCurPw(e.target.value)}
               />
-              {setupMsg && <div style={{ fontSize: 12, color: setupMsg.includes('Aktiviert') || setupMsg.includes('aktiviert') || setupMsg.includes('QR-Code') ? 'var(--green)' : '#f85149', lineHeight: 1.5 }}>{setupMsg}</div>}
+              {setupMsg && <div style={{ fontSize: 12, color: setupMsg.includes('2FA enabled') || setupMsg.includes('QR code') ? 'var(--green)' : '#f85149', lineHeight: 1.5 }}>{setupMsg}</div>}
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Btn type="submit" variant="primary" disabled={setupLoading || !setupCurPw}>2FA aktivieren</Btn>
+                <Btn type="submit" variant="primary" disabled={setupLoading || !setupCurPw}>Enable 2FA</Btn>
               </div>
             </form>
           )}
@@ -232,14 +232,14 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
                 {setup.secret}
               </div>
               <Input
-                type="text" placeholder="Verifizierungscode" inputMode="numeric" autoComplete="one-time-code"
+                type="text" placeholder="Verification code" inputMode="numeric" autoComplete="one-time-code"
                 value={verifyCode} onChange={e => setVerifyCode(e.target.value)}
                 style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.2em' }}
               />
-              {setupMsg && <div style={{ fontSize: 12, color: setupMsg.includes('aktiviert') ? 'var(--green)' : '#f85149', lineHeight: 1.5 }}>{setupMsg}</div>}
+              {setupMsg && <div style={{ fontSize: 12, color: setupMsg.includes('enabled') ? 'var(--green)' : '#f85149', lineHeight: 1.5 }}>{setupMsg}</div>}
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Btn type="button" variant="default" onClick={() => { setSetup(null); setSetupMsg('') }} disabled={setupLoading}>Abbrechen</Btn>
-                <Btn type="submit" variant="primary" disabled={setupLoading || !verifyCode}>Verifizieren</Btn>
+                <Btn type="button" variant="default" onClick={() => { setSetup(null); setSetupMsg('') }} disabled={setupLoading}>Cancel</Btn>
+                <Btn type="submit" variant="primary" disabled={setupLoading || !verifyCode}>Verify</Btn>
               </div>
             </form>
           )}
@@ -247,20 +247,20 @@ export default function UserSettingsModal({ open, onClose, totpEnabled, onToggle
           {totpEnabled && (
             <form onSubmit={disableTotp} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.5 }}>
-                Gib das aktuelle Passwort und optional einen aktuellen 2FA-Code ein, um 2FA zu deaktivieren.
+                Enter your current password and optionally a current 2FA code to disable 2FA.
               </div>
               <Input
-                type="password" placeholder="Aktuelles Passwort"
+                type="password" placeholder="Current password"
                 value={disCurPw} onChange={e => setDisCurPw(e.target.value)}
               />
               <Input
-                type="text" placeholder="Aktueller 2FA-Code (optional)" inputMode="numeric" autoComplete="one-time-code"
+                type="text" placeholder="Current 2FA code (optional)" inputMode="numeric" autoComplete="one-time-code"
                 value={disCode} onChange={e => setDisCode(e.target.value)}
                 style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.2em' }}
               />
-              {disMsg && <div style={{ fontSize: 12, color: disMsg.includes('deaktiviert') ? 'var(--green)' : '#f85149', lineHeight: 1.5 }}>{disMsg}</div>}
+              {disMsg && <div style={{ fontSize: 12, color: disMsg.includes('disabled') ? 'var(--green)' : '#f85149', lineHeight: 1.5 }}>{disMsg}</div>}
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Btn type="submit" variant="danger" disabled={disLoading || !disCurPw}>2FA deaktivieren</Btn>
+                <Btn type="submit" variant="danger" disabled={disLoading || !disCurPw}>Disable 2FA</Btn>
               </div>
             </form>
           )}
