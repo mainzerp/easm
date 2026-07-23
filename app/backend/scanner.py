@@ -8,7 +8,7 @@ import notify
 from db import Scan, SessionLocal, Setting, utcnow
 from scanqueue import LOG_TTL, live_channel, log_key, redis_conn, stop_key
 
-SCRIPT = "/scripts/run-easm.sh"
+SCRIPT = "/app/scripts/run-easm.sh"
 RESULTS_DIR = "/results"
 
 DEFAULT_CONFIG_KEYS = {

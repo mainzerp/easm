@@ -42,7 +42,6 @@ services:
     volumes:
       - easm-results:/results
       - easm-data:/data
-      - ./scripts:/scripts:ro
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=${TZ:-UTC}
@@ -72,7 +71,6 @@ services:
     volumes:
       - easm-results:/results
       - easm-data:/data
-      - ./scripts:/scripts:ro
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=${TZ:-UTC}

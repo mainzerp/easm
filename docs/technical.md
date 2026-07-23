@@ -43,6 +43,7 @@ easm-ui/
 │   │   ├── scanner.py           # RQ job: subfinder, httpx, nmap, nuclei
 │   │   ├── requirements.txt     # pinned Python dependencies
 │   │   ├── requirements-dev.txt # pytest, ruff, httpx
+│   │   ├── scripts/            # scan script (bundled into image)
 │   │   ├── tests/               # pytest tests
 │   │   └── Dockerfile           # multi-stage: Go tools + Python runtime
 │   └── frontend/

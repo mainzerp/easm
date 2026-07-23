@@ -44,6 +44,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py auth.py notify.py db.py ingest.py scanqueue.py scanner.py ./
+COPY scripts/ ./scripts/
 COPY alembic.ini ./
 COPY alembic/ ./alembic/
 
