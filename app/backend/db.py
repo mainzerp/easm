@@ -1,13 +1,25 @@
 """Database layer for EASM Dashboard (PostgreSQL via SQLAlchemy 2)."""
+
 import os
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text, create_engine,
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    create_engine,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import (
-    DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker,
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    relationship,
+    sessionmaker,
 )
 
 DATABASE_URL = os.environ.get(
@@ -62,9 +74,7 @@ class Asset(Base):
     __tablename__ = "assets"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    scan_id: Mapped[int] = mapped_column(
-        ForeignKey("scans.id", ondelete="CASCADE"), index=True
-    )
+    scan_id: Mapped[int] = mapped_column(ForeignKey("scans.id", ondelete="CASCADE"), index=True)
     domain: Mapped[str] = mapped_column(String, index=True)
     host: Mapped[str] = mapped_column(String)
     ip: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -80,9 +90,7 @@ class Finding(Base):
     __tablename__ = "findings"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    scan_id: Mapped[int] = mapped_column(
-        ForeignKey("scans.id", ondelete="CASCADE"), index=True
-    )
+    scan_id: Mapped[int] = mapped_column(ForeignKey("scans.id", ondelete="CASCADE"), index=True)
     domain: Mapped[str] = mapped_column(String, index=True)
     host: Mapped[str | None] = mapped_column(String, nullable=True)
     template: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -96,6 +104,7 @@ class Finding(Base):
 
 class AssetTracker(Base):
     """Cross-scan view: when was each host first/last seen."""
+
     __tablename__ = "asset_tracker"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -109,6 +118,7 @@ class AssetTracker(Base):
 
 class FindingTracker(Base):
     """Cross-scan view: open vs resolved findings over time."""
+
     __tablename__ = "finding_tracker"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

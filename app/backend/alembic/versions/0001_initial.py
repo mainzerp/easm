@@ -4,8 +4,9 @@ Revision ID: 0001
 Revises:
 Create Date: 2026-07-22
 """
-from alembic import op
+
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "0001"
@@ -36,7 +37,9 @@ def upgrade() -> None:
     op.create_table(
         "assets",
         sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column("scan_id", sa.Integer(), sa.ForeignKey("scans.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "scan_id", sa.Integer(), sa.ForeignKey("scans.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("domain", sa.String(), nullable=False, server_default=""),
         sa.Column("host", sa.String(), nullable=False),
         sa.Column("ip", sa.String(), nullable=True),
@@ -50,7 +53,9 @@ def upgrade() -> None:
     op.create_table(
         "findings",
         sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column("scan_id", sa.Integer(), sa.ForeignKey("scans.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "scan_id", sa.Integer(), sa.ForeignKey("scans.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("domain", sa.String(), nullable=False, server_default=""),
         sa.Column("host", sa.String(), nullable=True),
         sa.Column("template", sa.String(), nullable=True),

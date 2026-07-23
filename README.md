@@ -1,8 +1,6 @@
 # EASM Dashboard
 
-[![quality](https://github.com/mainzerp/easm/actions/workflows/quality.yml/badge.svg)](https://github.com/mainzerp/easm/actions/workflows/quality.yml)
-[![test](https://github.com/mainzerp/easm/actions/workflows/test.yml/badge.svg)](https://github.com/mainzerp/easm/actions/workflows/test.yml)
-[![build](https://github.com/mainzerp/easm/actions/workflows/build.yml/badge.svg)](https://github.com/mainzerp/easm/actions/workflows/build.yml)
+[![ci](https://github.com/mainzerp/easm/actions/workflows/ci.yml/badge.svg)](https://github.com/mainzerp/easm/actions/workflows/ci.yml)
 [![docker](https://img.shields.io/badge/docker-ghcr.io%2Fmainzerp%2Feasm-blue)](https://github.com/mainzerp/easm/pkgs/container/easm-backend)
 
 Self-hosted External Attack Surface Management — FastAPI Backend + React Frontend + ProjectDiscovery Tools.
@@ -67,9 +65,7 @@ easm-ui/
 ├── scripts/
 │   └── run-easm.sh          # Subfinder -> dnsx -> httpx -> nmap -> Nuclei
 ├── .github/workflows/
-│   ├── quality.yml          # ruff + eslint
-│   ├── test.yml             # pytest + vitest
-│   └── build.yml            # Docker build + Trivy + push to GHCR
+│   └── ci.yml               # lint (ruff+eslint) → test (pytest+vitest) → build (Docker+Trivy+GHCR)
 ├── docker-compose.yml
 ├── nginx.conf
 ├── pyproject.toml           # ruff config

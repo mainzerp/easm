@@ -1,4 +1,5 @@
 """Parse scan result files and write them into the database."""
+
 import glob
 import os
 import re
@@ -7,7 +8,13 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from db import (
-    Asset, AssetTracker, Finding, FindingTracker, Scan, SessionLocal, utcnow,
+    Asset,
+    AssetTracker,
+    Finding,
+    FindingTracker,
+    Scan,
+    SessionLocal,
+    utcnow,
 )
 
 RESULTS_DIR = "/results"
@@ -113,11 +120,16 @@ def _apply_trackers(session: Session, scan: Scan) -> dict:
             tr.last_seen = scan_time
             tr.last_scan_id = scan.id
         else:
-            session.add(AssetTracker(
-                domain=asset.domain, host=asset.host,
-                first_seen=scan_time, last_seen=scan_time,
-                first_scan_id=scan.id, last_scan_id=scan.id,
-            ))
+            session.add(
+                AssetTracker(
+                    domain=asset.domain,
+                    host=asset.host,
+                    first_seen=scan_time,
+                    last_seen=scan_time,
+                    first_scan_id=scan.id,
+                    last_scan_id=scan.id,
+                )
+            )
             new_assets.append(asset.host)
 
     if scan.nuclei_enabled:
@@ -127,11 +139,7 @@ def _apply_trackers(session: Session, scan: Scan) -> dict:
         for f in scan.findings:
             key = _finding_key(f.template, f.host, f.raw)
             seen_keys.add(key)
-            tr = (
-                session.query(FindingTracker)
-                .filter_by(template=key[0], host=key[1])
-                .one_or_none()
-            )
+            tr = session.query(FindingTracker).filter_by(template=key[0], host=key[1]).one_or_none()
             if tr:
                 tr.last_seen = scan_time
                 tr.last_scan_id = scan.id
@@ -140,13 +148,20 @@ def _apply_trackers(session: Session, scan: Scan) -> dict:
                     tr.resolved_scan_id = None
                     new_findings.append(f.raw)
             else:
-                session.add(FindingTracker(
-                    domain=f.domain, template=key[0], host=key[1] or "",
-                    severity=f.severity, raw=f.raw,
-                    first_seen=scan_time, last_seen=scan_time,
-                    first_scan_id=scan.id, last_scan_id=scan.id,
-                    resolved=False,
-                ))
+                session.add(
+                    FindingTracker(
+                        domain=f.domain,
+                        template=key[0],
+                        host=key[1] or "",
+                        severity=f.severity,
+                        raw=f.raw,
+                        first_seen=scan_time,
+                        last_seen=scan_time,
+                        first_scan_id=scan.id,
+                        last_scan_id=scan.id,
+                        resolved=False,
+                    )
+                )
                 new_findings.append(f.raw)
 
         open_for_domains = (
@@ -186,16 +201,18 @@ def ingest_scan(
 
     for host in subdomains:
         status, title, tech = http_map.get(host, (None, None, None))
-        session.add(Asset(
-            scan_id=scan.id,
-            domain=attribute_domain(host, domains),
-            host=host,
-            ip=ip_map.get(host),
-            http_status=status,
-            title=title,
-            tech=tech,
-            ports=",".join(ports_map.get(host, [])) or None,
-        ))
+        session.add(
+            Asset(
+                scan_id=scan.id,
+                domain=attribute_domain(host, domains),
+                host=host,
+                ip=ip_map.get(host),
+                http_status=status,
+                title=title,
+                tech=tech,
+                ports=",".join(ports_map.get(host, [])) or None,
+            )
+        )
 
     for line in _read_lines(os.path.join(out_dir, "vulns.txt")):
         f = _parse_finding_line(line, domains, scan_time)
@@ -224,8 +241,12 @@ def import_legacy_results(domains: list[str]) -> int:
             started = utcnow()
             if m:
                 started = datetime(
-                    int(m.group(1)), int(m.group(2)), int(m.group(3)),
-                    int(m.group(4)), int(m.group(5)), tzinfo=timezone.utc,
+                    int(m.group(1)),
+                    int(m.group(2)),
+                    int(m.group(3)),
+                    int(m.group(4)),
+                    int(m.group(5)),
+                    tzinfo=timezone.utc,
                 )
             out_dir = path.rstrip("/")
             scan = Scan(
@@ -253,9 +274,7 @@ def backfill_nuclei_enabled() -> None:
     try:
         for scan in session.query(Scan).all():
             if scan.output_dir and os.path.isdir(scan.output_dir):
-                scan.nuclei_enabled = os.path.exists(
-                    os.path.join(scan.output_dir, "vulns.txt")
-                )
+                scan.nuclei_enabled = os.path.exists(os.path.join(scan.output_dir, "vulns.txt"))
         session.commit()
     finally:
         session.close()
@@ -268,12 +287,7 @@ def rebuild_trackers() -> None:
         session.query(FindingTracker).delete()
         session.query(AssetTracker).delete()
         session.commit()
-        scans = (
-            session.query(Scan)
-            .filter_by(status="done")
-            .order_by(Scan.started_at.asc())
-            .all()
-        )
+        scans = session.query(Scan).filter_by(status="done").order_by(Scan.started_at.asc()).all()
         for scan in scans:
             _apply_trackers(session, scan)
         session.commit()

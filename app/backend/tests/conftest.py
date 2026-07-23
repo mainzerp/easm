@@ -10,6 +10,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
 )
 
 from main import app  # noqa: E402
+
 import auth  # noqa: E402
 
 

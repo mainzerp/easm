@@ -1,13 +1,12 @@
 """RQ worker job: execute a scan end-to-end in the worker container."""
-import json
+
 import os
 import subprocess
-from datetime import datetime
 
-from db import SessionLocal, Scan, Setting, utcnow
 import ingest
 import notify
-from scanqueue import log_key, live_channel, stop_key, redis_conn, LOG_TTL
+from db import Scan, SessionLocal, Setting, utcnow
+from scanqueue import LOG_TTL, live_channel, log_key, redis_conn, stop_key
 
 SCRIPT = "/scripts/run-easm.sh"
 RESULTS_DIR = "/results"

@@ -3,6 +3,7 @@
 SMTP mail (primary channel), Discord webhook.
 Change detection (new assets/findings) comes from the DB trackers (ingest.py).
 """
+
 import json
 import smtplib
 import urllib.request
@@ -47,9 +48,7 @@ def send_discord(cfg: dict, content: str) -> None:
     if not url:
         return
     data = json.dumps({"content": content}).encode()
-    req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"}
-    )
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=15):
         pass
 

@@ -4,6 +4,7 @@ Revision ID: 0004
 Revises: 0003
 Create Date: 2026-07-22
 """
+
 import json
 import os
 
@@ -18,9 +19,7 @@ depends_on = None
 def upgrade() -> None:
     # Check whether a credentials row already exists.
     conn = op.get_bind()
-    row = conn.execute(
-        "SELECT key FROM settings WHERE key = 'credentials'"
-    ).fetchone()
+    row = conn.execute("SELECT key FROM settings WHERE key = 'credentials'").fetchone()
     if row:
         return
 
@@ -39,6 +38,7 @@ def upgrade() -> None:
         # so the credentials row can be inserted. The user must set a password
         # via the UI or via env on the next startup.
         import secrets
+
         from argon2 import PasswordHasher
 
         generated = secrets.token_urlsafe(16)

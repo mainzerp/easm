@@ -1,4 +1,5 @@
 """Shared Redis connection + RQ queue for scan jobs."""
+
 import os
 
 import redis

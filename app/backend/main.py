@@ -1,29 +1,40 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Response, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
-from sqlalchemy import func
+import asyncio
+import json
+import os
+import subprocess
 from contextlib import asynccontextmanager
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-import json, os, subprocess, asyncio
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from sqlalchemy import func
+
 import auth
-import notify
 import ingest
+import notify
 from db import (
-    SessionLocal, Setting, Scan, Asset, Finding, AssetTracker, FindingTracker, utcnow,
+    Asset,
+    AssetTracker,
+    Finding,
+    FindingTracker,
+    Scan,
+    SessionLocal,
+    Setting,
+    utcnow,
 )
-from scanqueue import scan_queue, redis_conn, log_key, live_channel, stop_key, REDIS_URL
+from scanqueue import REDIS_URL, live_channel, log_key, redis_conn, scan_queue, stop_key
 
 # ── Scheduler ────────────────────────────────────────────────────────────────
 
 scheduler = AsyncIOScheduler()
 SCHEDULED_JOB_ID = "scheduled-scan"
+
 
 async def scheduled_scan():
     domains = load_config().get("targets", [])
@@ -34,6 +45,7 @@ async def scheduled_scan():
         print("EASM Scheduler: Scan läuft bereits — geplanter Lauf übersprungen.", flush=True)
     else:
         print(f"EASM Scheduler: Geplanter Scan eingereiht ({scan.date}).", flush=True)
+
 
 def apply_schedule():
     if scheduler.get_job(SCHEDULED_JOB_ID):
@@ -48,6 +60,7 @@ def apply_schedule():
         return
     scheduler.add_job(scheduled_scan, trigger, id=SCHEDULED_JOB_ID, replace_existing=True)
 
+
 def next_scheduled_run() -> Optional[str]:
     if not scheduler.running:
         return None
@@ -55,6 +68,7 @@ def next_scheduled_run() -> Optional[str]:
     if job and job.next_run_time:
         return job.next_run_time.isoformat()
     return None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -72,6 +86,7 @@ async def lifespan(app: FastAPI):
     yield
     scheduler.shutdown(wait=False)
 
+
 app = FastAPI(title="EASM Dashboard", lifespan=lifespan)
 
 app.add_middleware(
@@ -82,6 +97,7 @@ app.add_middleware(
 )
 
 # ── Auth & Security Middleware ──────────────────────────────────────────────
+
 
 @app.middleware("http")
 async def auth_and_security_middleware(request: Request, call_next):
@@ -103,17 +119,22 @@ async def auth_and_security_middleware(request: Request, call_next):
     )
     return response
 
+
 # ── Auth Endpoints ───────────────────────────────────────────────────────────
+
 
 class LoginRequest(BaseModel):
     password: str
     code: str = ""
 
+
 @app.post("/api/auth/login")
 def login(req: LoginRequest, request: Request, response: Response):
     ip = request.client.host if request.client else "unknown"
     if auth.is_blocked(ip):
-        raise HTTPException(status_code=429, detail="Zu viele Versuche — bitte später erneut probieren.")
+        raise HTTPException(
+            status_code=429, detail="Zu viele Versuche — bitte später erneut probieren."
+        )
     if not auth.verify_password(req.password):
         auth.register_failure(ip)
         raise HTTPException(status_code=401, detail="Ungültige Zugangsdaten.")
@@ -126,16 +147,21 @@ def login(req: LoginRequest, request: Request, response: Response):
     auth.clear_failures(ip)
     token = auth.create_session()
     response.set_cookie(
-        auth.SESSION_COOKIE, token,
-        httponly=True, samesite="strict", max_age=24 * 3600,
+        auth.SESSION_COOKIE,
+        token,
+        httponly=True,
+        samesite="strict",
+        max_age=24 * 3600,
     )
     return {"status": "ok"}
+
 
 @app.post("/api/auth/logout")
 def logout(request: Request, response: Response):
     auth.destroy_session(request.cookies.get(auth.SESSION_COOKIE))
     response.delete_cookie(auth.SESSION_COOKIE)
     return {"status": "ok"}
+
 
 @app.get("/api/auth/check")
 def auth_check(request: Request):
@@ -253,6 +279,7 @@ DEFAULT_CONFIG = {
     "enable_nuclei": True,
 }
 
+
 def load_config() -> dict:
     session = SessionLocal()
     try:
@@ -271,6 +298,7 @@ def load_config() -> dict:
     finally:
         session.close()
 
+
 def save_config(cfg: dict):
     session = SessionLocal()
     try:
@@ -282,6 +310,7 @@ def save_config(cfg: dict):
         session.commit()
     finally:
         session.close()
+
 
 class Config(BaseModel):
     targets: list[str]
@@ -302,13 +331,16 @@ class Config(BaseModel):
     enable_nmap: bool = True
     enable_nuclei: bool = True
 
+
 @app.get("/api/config")
 def get_config():
     return load_config()
 
+
 @app.get("/api/domains")
 def list_domains():
     return {"domains": load_config().get("targets", [])}
+
 
 @app.post("/api/config")
 def update_config(cfg: Config):
@@ -316,7 +348,9 @@ def update_config(cfg: Config):
     apply_schedule()
     return {"status": "saved"}
 
+
 # ── Scan Results ─────────────────────────────────────────────────────────────
+
 
 @app.get("/api/scans")
 def list_scans(domain: Optional[str] = None):
@@ -331,31 +365,34 @@ def list_scans(domain: Optional[str] = None):
                 assets_q = assets_q.filter_by(domain=domain)
                 findings_q = findings_q.filter_by(domain=domain)
             assets = assets_q.all()
-            scans.append({
-                "date": s.date,
-                "status": s.status,
-                "triggered_by": s.triggered_by,
-                "target": s.target_desc,
-                "subdomains": len(assets),
-                "live_hosts": sum(1 for a in assets if a.http_status is not None),
-                "open_ports": sum(len(a.ports.split(",")) for a in assets if a.ports),
-                "findings": findings_q.count(),
-            })
+            scans.append(
+                {
+                    "date": s.date,
+                    "status": s.status,
+                    "triggered_by": s.triggered_by,
+                    "target": s.target_desc,
+                    "subdomains": len(assets),
+                    "live_hosts": sum(1 for a in assets if a.http_status is not None),
+                    "open_ports": sum(len(a.ports.split(",")) for a in assets if a.ports),
+                    "findings": findings_q.count(),
+                }
+            )
         return scans
     finally:
         session.close()
+
 
 @app.get("/api/scans/{date}")
 def get_scan(date: str):
     base = f"{RESULTS_DIR}/{date}"
     result = {"date": date, "files": {}}
-    for fname in ["subdomains.txt", "resolved.txt", "http-results.txt",
-                  "ports.txt", "vulns.txt"]:
+    for fname in ["subdomains.txt", "resolved.txt", "http-results.txt", "ports.txt", "vulns.txt"]:
         fp = os.path.join(base, fname)
         if os.path.exists(fp):
             with open(fp) as f:
                 result["files"][fname] = f.read()
     return result
+
 
 @app.get("/api/scans/{date}/findings")
 def get_findings(date: str, severity: Optional[str] = None, domain: Optional[str] = None):
@@ -382,10 +419,13 @@ def get_findings(date: str, severity: Optional[str] = None, domain: Optional[str
     finally:
         session.close()
 
+
 # ── Scan Queue (RQ) ──────────────────────────────────────────────────────────
+
 
 def _active_scans(session) -> list[Scan]:
     return session.query(Scan).filter(Scan.status.in_(["queued", "running"])).all()
+
 
 def _enqueue_scan(domains: list[str], triggered_by: str):
     """Create a queued scan row + enqueue RQ job. Returns (scan, overlap_domains)."""
@@ -423,8 +463,10 @@ def _enqueue_scan(domains: list[str], triggered_by: str):
     finally:
         session.close()
 
+
 class ScanRequest(BaseModel):
     target: Optional[str] = None
+
 
 @app.post("/api/scan/trigger")
 def trigger_scan(req: ScanRequest):
@@ -435,6 +477,7 @@ def trigger_scan(req: ScanRequest):
     if scan is None:
         return {"status": "domain_conflict", "domains": overlap}
     return {"status": "queued", "date": scan.date, "target": scan.target_desc}
+
 
 @app.post("/api/scan/cancel")
 def cancel_scan():
@@ -457,6 +500,7 @@ def cancel_scan():
         return {"status": "canceling", "count": len(active)}
     finally:
         session.close()
+
 
 @app.get("/api/scan/status")
 def scan_status():
@@ -484,16 +528,20 @@ def scan_status():
     finally:
         session.close()
 
+
 @app.post("/api/notify/test")
 def notify_test():
     cfg = load_config()
     if not notify.smtp_configured(cfg):
-        raise HTTPException(status_code=400, detail="SMTP nicht konfiguriert (smtp_host/smtp_to fehlen).")
+        raise HTTPException(
+            status_code=400, detail="SMTP nicht konfiguriert (smtp_host/smtp_to fehlen)."
+        )
     try:
         notify.send_test_mail(cfg)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Versand fehlgeschlagen: {e}")
     return {"status": "sent"}
+
 
 @app.get("/api/assets")
 def list_assets(
@@ -507,13 +555,17 @@ def list_assets(
     session = SessionLocal()
     try:
         latest = (
-            session.query(Scan)
-            .filter_by(status="done")
-            .order_by(Scan.started_at.desc())
-            .first()
+            session.query(Scan).filter_by(status="done").order_by(Scan.started_at.desc()).first()
         )
         if not latest:
-            return {"total": 0, "page": 1, "per_page": per_page, "counts": {}, "items": [], "scan": None}
+            return {
+                "total": 0,
+                "page": 1,
+                "per_page": per_page,
+                "counts": {},
+                "items": [],
+                "scan": None,
+            }
 
         base = session.query(Asset).filter_by(scan_id=latest.id)
         if domain:
@@ -578,6 +630,7 @@ def list_assets(
         }
     finally:
         session.close()
+
 
 @app.get("/api/stats/overview")
 def stats_overview():
@@ -654,6 +707,7 @@ def stats_overview():
     finally:
         session.close()
 
+
 @app.get("/api/findings/open")
 def open_findings(domain: Optional[str] = None, severity: Optional[str] = None):
     session = SessionLocal()
@@ -680,23 +734,19 @@ def open_findings(domain: Optional[str] = None, severity: Optional[str] = None):
     finally:
         session.close()
 
+
 @app.get("/api/changes/latest")
 def latest_changes():
     session = SessionLocal()
     try:
         latest = (
-            session.query(Scan)
-            .filter_by(status="done")
-            .order_by(Scan.started_at.desc())
-            .first()
+            session.query(Scan).filter_by(status="done").order_by(Scan.started_at.desc()).first()
         )
         if not latest:
             return {"scan": None, "new_assets": [], "new_findings": []}
         new_assets = session.query(AssetTracker).filter_by(first_scan_id=latest.id).all()
         new_findings = (
-            session.query(FindingTracker)
-            .filter_by(first_scan_id=latest.id, resolved=False)
-            .all()
+            session.query(FindingTracker).filter_by(first_scan_id=latest.id, resolved=False).all()
         )
         return {
             "scan": latest.date,
@@ -713,6 +763,7 @@ def latest_changes():
         }
     finally:
         session.close()
+
 
 @app.websocket("/ws/scan")
 async def ws_scan(ws: WebSocket):
@@ -779,6 +830,7 @@ async def ws_scan(ws: WebSocket):
         await ws.close()
     except Exception:
         pass
+
 
 # ── Static Frontend ──────────────────────────────────────────────────────────
 

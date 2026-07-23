@@ -1,9 +1,8 @@
-import os
 from logging.config import fileConfig
 
 from alembic import context
 
-from db import Base, DATABASE_URL, engine
+from db import DATABASE_URL, Base, engine
 
 config = context.config
 config.set_main_option("sqlalchemy.url", DATABASE_URL)

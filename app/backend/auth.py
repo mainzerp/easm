@@ -7,6 +7,7 @@ seed when no credentials row exists yet.
 
 Sessions are in-memory (survive page reload, not backend restart).
 """
+
 import base64
 import os
 import secrets
@@ -104,10 +105,13 @@ def load_credentials() -> None:
 
     # No credentials in DB yet: seed from env or generate.
     password_hash, totp_secret = _seed_from_env()
-    _save_setting(CREDENTIALS_KEY, {
-        "password_hash": password_hash,
-        "totp_secret": totp_secret,
-    })
+    _save_setting(
+        CREDENTIALS_KEY,
+        {
+            "password_hash": password_hash,
+            "totp_secret": totp_secret,
+        },
+    )
     with _lock:
         _password_hash = password_hash
         _totp_secret = totp_secret
