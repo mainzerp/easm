@@ -1,0 +1,6 @@
+.env
+docs/SubAgent/
+__pycache__/
+node_modules/
+dist/
+.playwright-mcp/

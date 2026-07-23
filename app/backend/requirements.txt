@@ -1,0 +1,12 @@
+fastapi==0.138.1
+uvicorn[standard]==0.49.0
+pydantic==2.13.4
+argon2-cffi==25.1.0
+pyotp==2.10.0
+qrcode==8.2
+apscheduler==3.11.3
+sqlalchemy==2.0.51
+alembic==1.18.5
+psycopg[binary]==3.3.4
+rq==2.10.0
+redis==8.0.1

@@ -1,0 +1,128 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EASM Design System — "Clinical Security Analytics"
+   Ruhiges, präzises System: weiße Karten auf kühlem Grund, systematisches
+   8px-Spacing, selbstbewusste Zahlen, Farbe nur mit Bedeutung.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root, [data-theme='dark'] {
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
+
+  /* surfaces */
+  --bg:        #0b0f14;
+  --bg2:       #11161d;
+  --bg3:       #1a212b;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.13);
+
+  /* text */
+  --text:      #eef2f7;
+  --text2:     #9aa7b5;
+  --text3:     #64707e;
+
+  /* brand + links */
+  --teal:      #14b8a6;
+  --teal-soft-bg: rgba(20,184,166,0.12);
+  --link:      #60a5fa;
+
+  /* accents */
+  --red:       #ef4444;
+  --amber:     #d97706;
+  --blue:      #3b82f6;
+  --green:     #22c55e;
+
+  /* severity — soft (backgrounds) */
+  --sev-critical-bg: rgba(220,38,38,0.14);  --sev-critical-fg: #f87171; --sev-critical-border: rgba(220,38,38,0.35);
+  --sev-high-bg:     rgba(234,88,12,0.14);  --sev-high-fg:     #fb923c; --sev-high-border:     rgba(234,88,12,0.35);
+  --sev-medium-bg:   rgba(217,119,6,0.14);  --sev-medium-fg:   #fbbf24; --sev-medium-border:   rgba(217,119,6,0.35);
+  --sev-low-bg:      rgba(22,163,74,0.14);  --sev-low-fg:      #4ade80; --sev-low-border:      rgba(22,163,74,0.35);
+  --sev-info-bg:     var(--bg3);            --sev-info-fg:     var(--text2); --sev-info-border: var(--border);
+
+  /* severity — solid (filled badges) */
+  --sev-critical-solid: #dc2626;
+  --sev-high-solid:     #ea580c;
+  --sev-medium-solid:   #d97706;
+  --sev-low-solid:      #16a34a;
+  --sev-info-solid:     #64748b;
+
+  --card-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  --gauge-track: var(--bg3);
+
+  --radius:    10px;
+  --radius-lg: 14px;
+}
+
+[data-theme='light'] {
+  --bg:        #f2f4f8;
+  --bg2:       #ffffff;
+  --bg3:       #eef1f6;
+  --border:    #e4e8ef;
+  --border2:   #d4dae4;
+
+  --text:      #101828;
+  --text2:     #475467;
+  --text3:     #98a2b3;
+
+  --teal:      #0e9f8a;
+  --teal-soft-bg: rgba(14,159,138,0.10);
+  --link:      #2563eb;
+
+  --red:       #dc2626;
+  --amber:     #b45309;
+  --blue:      #1d4ed8;
+  --green:     #15803d;
+
+  --sev-critical-bg: #fee4e2; --sev-critical-fg: #b42318; --sev-critical-border: #fecdca;
+  --sev-high-bg:     #fef0e0; --sev-high-fg:     #c2410c; --sev-high-border:     #f6d9b8;
+  --sev-medium-bg:   #fef3e0; --sev-medium-fg:   #b45309; --sev-medium-border:   #f5ddb0;
+  --sev-low-bg:      #e5f5ec; --sev-low-fg:      #15803d; --sev-low-border:      #c3e7d1;
+  --sev-info-bg:     var(--bg3); --sev-info-fg:  var(--text2); --sev-info-border: var(--border);
+
+  --sev-critical-solid: #dc2626;
+  --sev-high-solid:     #ea580c;
+  --sev-medium-solid:   #d97706;
+  --sev-low-solid:      #16a34a;
+  --sev-info-solid:     #64748b;
+
+  --card-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05);
+  --gauge-track: #e7eaf0;
+}
+
+/* ── base ────────────────────────────────────────────────────────────────── */
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+button {
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+a, .link {
+  color: var(--link);
+  text-decoration: none;
+}
+
+/* ── card ────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
+}

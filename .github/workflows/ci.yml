@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Start stack
+        run: docker compose up -d
+
+      - name: Wait for frontend
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/ > /dev/null; then
+              echo "frontend up"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Smoke test — frontend serves UI
+        run: curl -fsS http://localhost:3000/ | grep -qi "easm"
+
+      - name: Smoke test — API config endpoint
+        run: curl -fsS http://localhost:3000/api/config | grep -q '"targets"'
+
+      - name: Smoke test — scan status endpoint
+        run: curl -fsS http://localhost:3000/api/scan/status | grep -q '"running"'
+
+      - name: Verify pinned scanner tools present
+        run: |
+          docker compose exec -T backend bash -c \
+            "which subfinder dnsx httpx nuclei nmap && subfinder -version 2>/dev/null | head -1"
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
