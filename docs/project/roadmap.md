@@ -101,13 +101,48 @@ Legend: Effort S = small (< 0.5 days), M = medium (0.5–1.5 days), L = large (2
 
 ## Phase 4 — Maturity & Maintenance
 
-### M11: Quality & Docs [M]
-- Backend tests (pytest: API, DB, scan parsing), frontend build in CI, lint (ruff, eslint).
-- Introduce `VERSION.md` + changelog process (SemVer, Conventional Commits).
-- Update README (auth, TLS, PostgreSQL, worker, reverse proxy example incl. self-signed integration).
-- Optional: Export (CSV/JSON), WebAuthn/Passkey for login.
-- Acceptance: CI green (build + lint + tests); README step-by-step reproducible in production.
+### M11: Quality & Docs [M] — done (2026-07-23)
+- Backend tests (pytest: API, DB), frontend tests (vitest), CI lint (ruff, eslint).
+- CI/CD pipeline: lint → test → build (Docker + Trivy + GHCR).
+- `VERSION.md` + changelog process in place (SemVer, Conventional Commits).
+- README restructured with project description, tech docs extracted to `docs/technical.md`.
+- All documentation and UI translated to English.
+- Acceptance: CI green (build + lint + tests); production deployment self-contained (no host file mounts).
 
+**Phase 4 result:** Robust CI/CD, English documentation, production-ready images on GHCR.
+
+---
+
+## Phase 5 — Scan Engine Rework
+
+### M12: Modular Scan Pipeline with Live Progress [L]
+- **Modular architecture:** Replace the monolithic `run-easm.sh` shell script with a
+  Python-based scan orchestrator. Each tool (subfinder, dnsx, httpx, nmap, nuclei)
+  becomes a pluggable pipeline step defined declaratively (command, args, timeout,
+  output parser, enabled flag).
+- **Tool registry:** Steps are registered in a config-driven registry. Adding a new
+  tool only requires a registry entry — no code changes to the orchestrator.
+- **Structured logging:** Each phase emits JSON-line log events with typed fields
+  (`phase`, `status`, `hosts_found`, `duration_ms`, `error`). Parsers are isolated
+  per tool for clean separation of concerns.
+- **Live progress streaming:** The worker publishes phase transition events via
+  Redis Pub/Sub during the scan. The backend relays these to the frontend over the
+  existing WebSocket. The ScanLive view shows a real-time pipeline timeline with
+  per-phase status (queued → running → done/failed), live counters (subdomains
+  discovered, hosts resolved, HTTP services found, findings detected), and elapsed
+  time per phase.
+- **Frontend enhancements:** ScanLive view gains a progress sidebar/timeline
+  showing all pipeline phases with animated status indicators, live metrics, and
+  phase-level logs. Users can see exactly which phase is running and what it has
+  found so far, without waiting for the entire scan to finish.
+- **Extensibility:** New tools (e.g., katana, naabu, uncover) can be added by
+  defining a registry entry (command template, output parser, phase name) and
+  rebuilding the image. The UI automatically reflects new phases.
+- Acceptance: A scan shows per-phase progress in real time; adding a new tool is a
+  config-only change; live phase counters update as the scan runs; pipeline
+  timeline clears on scan completion.
+
+**Phase 5 result:** Modular, extensible scan engine with real-time per-phase progress visible in the UI.
 ---
 
 ## Dependencies & Order
@@ -121,13 +156,15 @@ M6 (Postgres) <─ can start in parallel to M2–M5 ─────────�
                                     │
                               M9 (Worker Queue) ─> M10 (Hardening)
                                                           │
-                                                       M11 (Quality/Docs)
+                                          M11 (Quality/Docs) ─> M12 (Scan Engine)
 ```
 
-Recommended implementation order: M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8 → M9 → M10 → M11.
+Recommended implementation order: M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8 → M9 → M10 → M11 → M12.
 M6 can start earlier once Phase 1 is running — DB migration decoupled from auth/TLS.
+M12 depends on M9 (worker infrastructure) and M11 (CI/CD, WebSocket already present).
 
 ## Out of Scope (deliberately not planned)
 - Multi-user/roles (single-user decided), SSO/LDAP.
 - Cloud integrations (Censys/Shodan APIs), active exploit verification.
 - Multi-tenancy.
+- CSV/JSON export, WebAuthn/Passkey (deferred, not planned).
