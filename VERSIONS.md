@@ -31,7 +31,7 @@ Alle Build-relevanten Versionen sind an genau einer Stelle gepinnt:
 | redis | 8.0.1 |
 | qrcode | 8.2 |
 
-## Services (docker-compose.yml)
+## Services (docker-compose.yml / docker-compose.local.yml)
 
 | Image | Tag |
 |-------|-----|

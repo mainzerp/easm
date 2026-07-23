@@ -66,7 +66,8 @@ easm-ui/
 │   └── run-easm.sh          # Subfinder -> dnsx -> httpx -> nmap -> Nuclei
 ├── .github/workflows/
 │   └── ci.yml               # lint (ruff+eslint) → test (pytest+vitest) → build (Docker+Trivy+GHCR)
-├── docker-compose.yml
+├── docker-compose.yml          # Produktion: nutzt GHCR-Images
+├── docker-compose.local.yml    # Lokale Entwicklung: baut Images selbst
 ├── nginx.conf
 ├── pyproject.toml           # ruff config
 ├── VERSIONS.md              # gepinnte Tool-Versionen
@@ -155,6 +156,35 @@ Sämtliche `/api/*`-Endpoints (außer `/api/auth/*`) benötigen ein gültiges Se
 | GET | `/api/changes/latest` | Neue Assets/Findings seit letztem Scan |
 | WS | `/ws/scan` | Live-Log via WebSocket |
 | POST | `/api/notify/test` | Test-Mail senden |
+
+---
+
+## Deployment
+
+### Produktion (GHCR-Images)
+
+Die CI baut bei jedem Push auf `main` Images und pushed sie nach GHCR.
+Dort erwartet die Produktions-Compose ein sicheres Datenbank-Passwort.
+
+```bash
+cp .env.example .env
+# EASM_DB_PASSWORD setzen (mindestens)
+echo "EASM_DB_PASSWORD=$(openssl rand -hex 32)" >> .env
+
+docker compose pull
+docker compose up -d
+```
+
+Das Frontend lauscht auf den Standard-Ports `80` und `443`.
+
+### Lokale Entwicklung (selbst bauen)
+
+```bash
+docker compose -f docker-compose.local.yml up --build
+```
+
+Hier lauschen Frontend und API auf `http://localhost:3000` bzw.
+`https://localhost:3443`.
 
 ---
 
