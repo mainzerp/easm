@@ -138,9 +138,17 @@ Legend: Effort S = small (< 0.5 days), M = medium (0.5–1.5 days), L = large (2
 - **Extensibility:** New tools (e.g., katana, naabu, uncover) can be added by
   defining a registry entry (command template, output parser, phase name) and
   rebuilding the image. The UI automatically reflects new phases.
+- **Remote log access:** Scan logs (currently stored in Redis with a 24 h TTL)
+  are exposed via a new API endpoint (`GET /api/scans/{date}/log`) so they can be
+  reviewed even after the WebSocket connection closes. Past scan logs are
+  fetched from the results directory on disk. A log viewer panel in the Scan
+  detail view lets operators debug issues without accessing the server directly.
+  Worker-level logs (RQ job output, tool stderr) are also captured and
+  retrievable through the same endpoint.
 - Acceptance: A scan shows per-phase progress in real time; adding a new tool is a
   config-only change; live phase counters update as the scan runs; pipeline
-  timeline clears on scan completion.
+  timeline clears on scan completion; past scan logs are viewable from the UI
+  without server access.
 
 **Phase 5 result:** Modular, extensible scan engine with real-time per-phase progress visible in the UI.
 ---
