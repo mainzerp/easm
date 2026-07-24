@@ -30,6 +30,7 @@ All build-critical versions are pinned in one place:
 | rq | 2.10.0 |
 | redis | 8.0.1 |
 | qrcode | 8.2 |
+| httpx | 0.28.1 |
 
 ## Services (docker-compose.yml / docker-compose.local.yml)
 
@@ -37,6 +38,7 @@ All build-critical versions are pinned in one place:
 |-------|-----|
 | PostgreSQL | `postgres:18-alpine` |
 | Redis | `redis:8-alpine` |
+| Docker socket proxy | `wollomatic/socket-proxy:1.12.3` |
 
 ## Base Images
 

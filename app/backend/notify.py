@@ -1,6 +1,6 @@
 """Notification handling for EASM Dashboard.
 
-SMTP mail (primary channel), Discord webhook.
+SMTP mail (primary channel), Discord and Slack webhooks.
 Change detection (new assets/findings) comes from the DB trackers (ingest.py).
 """
 
@@ -53,6 +53,16 @@ def send_discord(cfg: dict, content: str) -> None:
         pass
 
 
+def send_slack(cfg: dict, text: str) -> None:
+    url = cfg.get("slack_webhook", "")
+    if not url:
+        return
+    data = json.dumps({"text": text}).encode()
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=15):
+        pass
+
+
 def _notify_channels(cfg: dict, subject: str, body: str) -> None:
     errors = []
     if smtp_configured(cfg):
@@ -67,6 +77,12 @@ def _notify_channels(cfg: dict, subject: str, body: str) -> None:
             print(f"EASM Notify: Discord sent ({subject})", flush=True)
         except Exception as e:
             errors.append(f"Discord: {e}")
+    if cfg.get("slack_webhook"):
+        try:
+            send_slack(cfg, f"*{subject}*\n```\n{body}\n```")
+            print(f"EASM Notify: Slack sent ({subject})", flush=True)
+        except Exception as e:
+            errors.append(f"Slack: {e}")
     for err in errors:
         print(f"EASM Notify ERROR: {err}", flush=True)
 

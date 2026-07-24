@@ -1,8 +1,17 @@
 # Version
 
-Current version: 0.3.0
+Current version: 0.4.0
 
 ## Version History
+
+### 0.4.0 - 2026-07-23
+- Replaced the monolithic `run-easm.sh` shell orchestrator with a modular Python scan pipeline (`app/backend/pipeline/`): declarative `StepDefinition`s, config-driven tool registry, streamed subprocess execution with timeout/cancel semantics.
+- Live per-phase progress: the worker publishes typed events (phase/counter/status) via Redis; `/ws/scan` relays them and the ScanLive view shows a real-time pipeline timeline with counters and per-phase elapsed time.
+- Added `scan_id` selection to `/ws/scan`, `id` fields to `/api/scan/status` and `/api/scan/trigger`, and `status` on the WS `done` message.
+- Added container log access via a read-only Docker socket-proxy sidecar: `GET /api/logs/services`, `GET /api/logs/{service}`, `GET /api/scans/{date}/log`, and live tail over `WS /ws/logs`; new Logs view in the UI.
+- Added optional alterx subdomain-permutation step (`enable_alterx`, default off).
+- Added Slack webhook notifications (`send_slack`), closing the M5 gap.
+- Historical scan logs are written to `/results/<date>/scan.log` during the run.
 
 ### 0.3.0 - 2026-07-23
 - Added pytest test suite for backend auth endpoints.

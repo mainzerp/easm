@@ -107,13 +107,14 @@ export default function Config() {
           <div>
             <SectionHead>Scan-Phasen</SectionHead>
             {[
-              ['enable_httpx', 'httpx — HTTP Probing + Tech Detection'],
-              ['enable_nmap', 'nmap — Port Scan'],
-              ['enable_nuclei', 'Nuclei — Vulnerability Scan'],
-            ].map(([key, label]) => (
+              ['enable_alterx', 'alterx — Subdomain Permutation (optional)', false],
+              ['enable_httpx', 'httpx — HTTP Probing + Tech Detection', true],
+              ['enable_nmap', 'nmap — Port Scan', true],
+              ['enable_nuclei', 'Nuclei — Vulnerability Scan', true],
+            ].map(([key, label, def]) => (
               <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
                 <input type="checkbox"
-                  checked={cfg[key] ?? true}
+                  checked={cfg[key] ?? def}
                   onChange={e => setCfg(c => ({ ...c, [key]: e.target.checked }))}
                 />
                 <span style={{ fontSize: 13, color: 'var(--text2)' }}>{label}</span>

@@ -5,6 +5,7 @@ const NAV = [
   { key: 'assets',    icon: 'ti-server-2',         label: 'Assets' },
   { key: 'scans',     icon: 'ti-history',           label: 'Scan history' },
   { key: 'findings',  icon: 'ti-bug',               label: 'Findings' },
+  { key: 'logs',      icon: 'ti-terminal-2',         label: 'Logs' },
   { key: 'config',    icon: 'ti-settings',           label: 'Configuration' },
 ]
 

@@ -30,8 +30,12 @@ frontend (nginx, UI)  ──►  backend (FastAPI, API/WS/Scheduler)
 - **No cloud, no subscriptions.** All data stays in your own PostgreSQL database.
 - **Single-user, hardened security.** Login with Argon2 hashing, optional
   TOTP/2FA, rate-limiting, and HttpOnly session cookies.
-- **Scan engine with proven tools.** Subfinder, dnsx, httpx, nmap, Nuclei —
-  offloaded to an RQ worker so long scans never block the API.
+- **Modular scan pipeline with live progress.** Subfinder, alterx (optional),
+  dnsx, httpx, nmap, Nuclei as declarative pipeline steps — offloaded to an RQ
+  worker so long scans never block the API, with real-time per-phase status
+  and counters in the UI.
+- **Service log viewer.** Read-only access to all container logs (history,
+  filters, live tail) and historical scan logs directly from the UI.
 - **History & diffs.** Assets and findings are recorded per scan. New and
   resolved entries are automatically flagged.
 - **Cron scheduler.** Schedule recurring scans via a cron expression, e.g.
@@ -82,8 +86,9 @@ build takes 5–10 minutes.
 | **Dashboard** | Security score (0–10), metric cards with trend deltas, findings trend by severity, per-domain overview |
 | **Assets** | Inventory from the latest scan: hosts, IPs, HTTP status, title, technologies, open ports, open issues. Filterable, searchable, paginated |
 | **Findings** | Open Nuclei findings by domain/severity, new/resolved delta |
-| **Scans** | Manual trigger, cancel, live log via WebSocket, scheduled cron scans |
-| **Config** | Targets, ports, Nuclei severity, notifications, cron schedule |
+| **Scans** | Manual trigger, cancel, live pipeline timeline with per-phase status and counters via WebSocket, scheduled cron scans |
+| **Logs** | Container logs from all services (filter, search, live tail) and historical scan logs in the UI |
+| **Config** | Targets, ports, Nuclei severity, pipeline phases (httpx/nmap/nuclei/alterx), notifications, cron schedule |
 | **Security** | Admin password + optional 2FA, rate-limiting, security headers, TLS option |
 
 ---
@@ -104,3 +109,9 @@ see [`docs/technical.md`](docs/technical.md).
 The dashboard is designed to run behind a reverse proxy or on an internal
 network. Use a strong admin password, enable 2FA, and set a dedicated,
 random PostgreSQL password in production.
+
+Container logs are exposed to the backend through a dedicated read-only
+socket-proxy sidecar (`wollomatic/socket-proxy`): the Docker socket is never
+mounted into app containers, the proxy only allows `GET` requests to the
+container-list and container-log endpoints (`POST=0`), and it is reachable
+only on the internal Docker network.

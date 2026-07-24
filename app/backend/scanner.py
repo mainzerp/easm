@@ -1,49 +1,16 @@
 """RQ worker job: execute a scan end-to-end in the worker container."""
 
 import os
-import subprocess
 
 import ingest
 import notify
-from db import Scan, SessionLocal, Setting, utcnow
+from config import load_config
+from db import Scan, SessionLocal, utcnow
+from pipeline.events import RedisPublisher
+from pipeline.runner import PipelineRunner
 from scanqueue import LOG_TTL, live_channel, log_key, redis_conn, stop_key
 
-SCRIPT = "/app/scripts/run-easm.sh"
 RESULTS_DIR = "/results"
-
-DEFAULT_CONFIG_KEYS = {
-    "discord_webhook": "",
-    "nuclei_severity": ["critical", "high"],
-    "ports": "80,443",
-    "enable_httpx": True,
-    "enable_nmap": True,
-    "enable_nuclei": True,
-}
-
-
-def _load_config(session) -> dict:
-    row = session.get(Setting, "config")
-    return {**DEFAULT_CONFIG_KEYS, **(row.value if row and row.value else {})}
-
-
-def _build_env(cfg: dict, domains: list[str], out: str) -> dict:
-    return {
-        **os.environ,
-        "TARGET_DOMAIN": "\n".join(domains),
-        "DISCORD_WEBHOOK": cfg.get("discord_webhook", ""),
-        "NUCLEI_SEVERITY": ",".join(cfg.get("nuclei_severity", ["critical", "high"])),
-        "PORTS": cfg.get("ports", "80,443"),
-        "ENABLE_HTTPX": "true" if cfg.get("enable_httpx", True) else "false",
-        "ENABLE_NMAP": "true" if cfg.get("enable_nmap", True) else "false",
-        "ENABLE_NUCLEI": "true" if cfg.get("enable_nuclei", True) else "false",
-        "OUTPUT_DIR": out,
-    }
-
-
-def _publish(line: str, scan_id: int) -> None:
-    redis_conn.rpush(log_key(scan_id), line)
-    redis_conn.expire(log_key(scan_id), LOG_TTL)
-    redis_conn.publish(live_channel(scan_id), line)
 
 
 def _finish(session, scan: Scan, status: str, error: str | None = None) -> None:
@@ -66,7 +33,7 @@ def run_scan_job(scan_id: int) -> None:
             redis_conn.publish(live_channel(scan_id), "__DONE__")
             return
         domains = scan.domains or []
-        cfg = _load_config(session)
+        cfg = load_config(session)
         out = scan.output_dir
         os.makedirs(out, exist_ok=True)
 
@@ -74,39 +41,33 @@ def run_scan_job(scan_id: int) -> None:
         scan.started_at = utcnow()
         session.commit()
 
-        env = _build_env(cfg, domains, out)
-        proc = subprocess.Popen(
-            [SCRIPT],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            env=env,
-        )
+        publisher = RedisPublisher(scan_id, out)
 
-        canceled = False
-        for raw in iter(proc.stdout.readline, b""):
-            if redis_conn.exists(stop_key(scan_id)):
-                canceled = True
-                proc.terminate()
-                try:
-                    proc.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                break
-            _publish(raw.decode(errors="replace").rstrip(), scan_id)
+        def stop_check() -> bool:
+            return bool(redis_conn.exists(stop_key(scan_id)))
 
-        if not canceled:
-            proc.wait()
+        outcome = PipelineRunner(
+            scan_id=scan_id,
+            out_dir=out,
+            domains=domains,
+            cfg=cfg,
+            publisher=publisher,
+            stop_check=stop_check,
+        ).run()
 
-        if canceled:
+        if outcome.status == "canceled":
             _finish(session, scan, "canceled", "Canceled by user")
-            _publish("[canceled] Scan canceled.", scan_id)
-        elif proc.returncode == 0:
+            publisher.log("[canceled] Scan canceled.")
+        elif outcome.status == "failed":
+            _finish(session, scan, "failed", outcome.error)
+            notify.notify_scan_failed(cfg, scan.target_desc, outcome.error or "unknown error")
+        else:
             _finish(session, scan, "done")
+            if outcome.warnings:
+                scan.error = "; ".join(outcome.warnings)
+                session.commit()
             changes = ingest.ingest_scan(session, scan, out, domains)
             notify.notify_scan_changes(cfg, changes, domains, scan.date)
-        else:
-            _finish(session, scan, "failed", f"Exit-Code {proc.returncode}")
-            notify.notify_scan_failed(cfg, scan.target_desc, f"Exit-Code {proc.returncode}")
     except Exception as e:
         try:
             scan = session.get(Scan, scan_id)
@@ -115,7 +76,7 @@ def run_scan_job(scan_id: int) -> None:
         except Exception:
             pass
         try:
-            notify.notify_scan_failed(_load_config(session), "", str(e))
+            notify.notify_scan_failed(load_config(session), "", str(e))
         except Exception:
             pass
     finally:

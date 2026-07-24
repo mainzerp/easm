@@ -7,9 +7,10 @@ import Scans from './views/Scans.jsx'
 import Findings from './views/Findings.jsx'
 import Config from './views/Config.jsx'
 import ScanLive from './views/ScanLive.jsx'
+import Logs from './views/Logs.jsx'
 import Login from './views/Login.jsx'
 
-const VIEWS = { dashboard: Dashboard, assets: Assets, scans: Scans, findings: Findings, config: Config, scan: ScanLive }
+const VIEWS = { dashboard: Dashboard, assets: Assets, scans: Scans, findings: Findings, config: Config, scan: ScanLive, logs: Logs }
 
 export default function App() {
   const [view, setView]           = useState('dashboard')

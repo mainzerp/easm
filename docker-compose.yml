@@ -9,6 +9,9 @@ services:
     image: postgres:18-alpine
     container_name: easm-db
     restart: unless-stopped
+    labels:
+      - easm.logs=enabled
+      - easm.service=db
     environment:
       POSTGRES_USER: easm
       POSTGRES_PASSWORD: ${EASM_DB_PASSWORD:?EASM_DB_PASSWORD is required}
@@ -28,6 +31,9 @@ services:
     image: redis:8-alpine
     container_name: easm-redis
     restart: unless-stopped
+    labels:
+      - easm.logs=enabled
+      - easm.service=redis
     volumes:
       - easm-redis:/data
     healthcheck:
@@ -44,6 +50,9 @@ services:
     container_name: easm-backend
     restart: unless-stopped
     pull_policy: always
+    labels:
+      - easm.logs=enabled
+      - easm.service=backend
     volumes:
       - easm-results:/results
       - easm-data:/data
@@ -52,6 +61,7 @@ services:
       - TZ=${TZ:-UTC}
       - DATABASE_URL=postgresql+psycopg://easm:${EASM_DB_PASSWORD}@db:5432/easm
       - REDIS_URL=redis://redis:6379/0
+      - DOCKER_PROXY_URL=http://socket-proxy:2375
       - EASM_ADMIN_PASSWORD=${EASM_ADMIN_PASSWORD:-}
       - EASM_ADMIN_PASSWORD_HASH=${EASM_ADMIN_PASSWORD_HASH:-}
     healthcheck:
@@ -74,6 +84,9 @@ services:
     restart: unless-stopped
     pull_policy: always
     command: rq worker-pool easm-scans --num-workers 2 --url redis://redis:6379/0
+    labels:
+      - easm.logs=enabled
+      - easm.service=worker
     volumes:
       - easm-results:/results
       - easm-data:/data
@@ -98,6 +111,9 @@ services:
     container_name: easm-frontend
     restart: unless-stopped
     pull_policy: always
+    labels:
+      - easm.logs=enabled
+      - easm.service=frontend
     volumes:
       - easm-tls:/etc/nginx/tls
     environment:
@@ -110,6 +126,24 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - easm
+
+  # ── Docker Socket Proxy (read-only container log access) ─────────────────
+  # wollomatic/socket-proxy: regex allowlists per HTTP method; every method not
+  # listed is denied, so GET-only below means POST/PUT/DELETE are blocked.
+  # The socket is mounted :ro here only — never into app containers.
+  socket-proxy:
+    image: wollomatic/socket-proxy:1.12.3
+    container_name: easm-socket-proxy
+    restart: unless-stopped
+    command:
+      - "-listenip=0.0.0.0"
+      - "-allowfrom=backend"
+      - "-allowGET=/containers/json"
+      - "-allowGET=/containers/[^/]+/logs"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - easm
 

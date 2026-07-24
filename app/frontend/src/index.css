@@ -126,3 +126,7 @@ a, .link {
   border-radius: var(--radius-lg);
   box-shadow: var(--card-shadow);
 }
+
+/* ── animations ──────────────────────────────────────────────────────────── */
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.75); } }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }

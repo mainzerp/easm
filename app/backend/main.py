@@ -17,7 +17,9 @@ from sqlalchemy import func
 
 import auth
 import ingest
+import logroutes
 import notify
+from config import Config, load_config, save_config
 from db import (
     Asset,
     AssetTracker,
@@ -26,10 +28,10 @@ from db import (
     FindingTracker,
     Scan,
     SessionLocal,
-    Setting,
     engine,
     utcnow,
 )
+from pipeline.events import phase_key
 from scanqueue import REDIS_URL, live_channel, log_key, redis_conn, scan_queue, stop_key
 
 # ── Scheduler ────────────────────────────────────────────────────────────────
@@ -80,9 +82,7 @@ async def lifespan(app: FastAPI):
         subprocess.run(["alembic", "upgrade", "head"], cwd="/app", check=True)
     else:
         await asyncio.to_thread(Base.metadata.create_all, bind=engine)
-    imported = await asyncio.to_thread(
-        ingest.import_legacy_results, load_config().get("targets", [])
-    )
+    imported = await asyncio.to_thread(ingest.import_legacy_results, load_config().get("targets", []))
     if imported:
         print(f"EASM DB: {imported} alte Scan-Ergebnisse importiert.", flush=True)
     await asyncio.to_thread(ingest.backfill_nuclei_enabled)
@@ -139,9 +139,7 @@ class LoginRequest(BaseModel):
 def login(req: LoginRequest, request: Request, response: Response):
     ip = request.client.host if request.client else "unknown"
     if auth.is_blocked(ip):
-        raise HTTPException(
-            status_code=429, detail="Too many attempts — please try again later."
-        )
+        raise HTTPException(status_code=429, detail="Too many attempts — please try again later.")
     if not auth.verify_password(req.password):
         auth.register_failure(ip)
         raise HTTPException(status_code=401, detail="Invalid credentials.")
@@ -260,83 +258,9 @@ def totp_disable(req: TotpDisableRequest, request: Request):
     return {"totp_enabled": False}
 
 
-CONFIG_FILE = "/data/config.json"
 RESULTS_DIR = "/results"
-SCRIPTS_DIR = "/scripts"
 
 # ── Config ──────────────────────────────────────────────────────────────────
-
-DEFAULT_CONFIG = {
-    "targets": [],
-    "discord_webhook": "",
-    "slack_webhook": "",
-    "schedule": "0 3 * * *",
-    "nuclei_severity": ["critical", "high", "medium"],
-    "ports": "80,443,8080,8443,22,21,3306,5432,6379,9200,27017",
-    "notify_on": ["new_asset", "new_vuln", "scan_failed"],
-    "smtp_host": "",
-    "smtp_port": 587,
-    "smtp_user": "",
-    "smtp_password": "",
-    "smtp_from": "",
-    "smtp_to": "",
-    "smtp_tls": "starttls",
-    "enable_httpx": True,
-    "enable_nmap": True,
-    "enable_nuclei": True,
-}
-
-
-def load_config() -> dict:
-    session = SessionLocal()
-    try:
-        row = session.get(Setting, "config")
-        if row and row.value:
-            return {**DEFAULT_CONFIG, **row.value}
-        # one-time migration from legacy config.json
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE) as f:
-                cfg = {**DEFAULT_CONFIG, **json.load(f)}
-            session.add(Setting(key="config", value=cfg))
-            session.commit()
-            print("EASM DB: config.json in DB migriert.", flush=True)
-            return cfg
-        return DEFAULT_CONFIG
-    finally:
-        session.close()
-
-
-def save_config(cfg: dict):
-    session = SessionLocal()
-    try:
-        row = session.get(Setting, "config")
-        if row:
-            row.value = cfg
-        else:
-            session.add(Setting(key="config", value=cfg))
-        session.commit()
-    finally:
-        session.close()
-
-
-class Config(BaseModel):
-    targets: list[str]
-    discord_webhook: str = ""
-    slack_webhook: str = ""
-    schedule: str = "0 3 * * *"
-    nuclei_severity: list[str] = ["critical", "high", "medium"]
-    ports: str = "80,443,8080,8443,22,21,3306,5432,6379,9200,27017"
-    notify_on: list[str] = ["new_asset", "new_vuln", "scan_failed"]
-    smtp_host: str = ""
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_from: str = ""
-    smtp_to: str = ""
-    smtp_tls: str = "starttls"
-    enable_httpx: bool = True
-    enable_nmap: bool = True
-    enable_nuclei: bool = True
 
 
 @app.get("/api/config")
@@ -483,7 +407,7 @@ def trigger_scan(req: ScanRequest):
     scan, overlap = _enqueue_scan(domains, "manual")
     if scan is None:
         return {"status": "domain_conflict", "domains": overlap}
-    return {"status": "queued", "date": scan.date, "target": scan.target_desc}
+    return {"status": "queued", "id": scan.id, "date": scan.date, "target": scan.target_desc}
 
 
 @app.post("/api/scan/cancel")
@@ -525,6 +449,7 @@ def scan_status():
         return {
             "running": bool(active),
             "state": cur.status if cur else "idle",
+            "id": cur.id if cur else (latest_done.id if latest_done else None),
             "target": cur.target_desc if cur else None,
             "started": cur.started_at.isoformat() if cur and cur.started_at else None,
             "queued": sum(1 for s in active if s.status == "queued"),
@@ -540,9 +465,7 @@ def scan_status():
 def notify_test():
     cfg = load_config()
     if not notify.smtp_configured(cfg):
-        raise HTTPException(
-            status_code=400, detail="SMTP nicht konfiguriert (smtp_host/smtp_to fehlen)."
-        )
+        raise HTTPException(status_code=400, detail="SMTP nicht konfiguriert (smtp_host/smtp_to fehlen).")
     try:
         notify.send_test_mail(cfg)
     except Exception as e:
@@ -561,9 +484,7 @@ def list_assets(
     """Asset inventory of the latest completed scan."""
     session = SessionLocal()
     try:
-        latest = (
-            session.query(Scan).filter_by(status="done").order_by(Scan.started_at.desc()).first()
-        )
+        latest = session.query(Scan).filter_by(status="done").order_by(Scan.started_at.desc()).first()
         if not latest:
             return {
                 "total": 0,
@@ -643,13 +564,7 @@ def list_assets(
 def stats_overview():
     session = SessionLocal()
     try:
-        done_scans = (
-            session.query(Scan)
-            .filter_by(status="done")
-            .order_by(Scan.started_at.desc())
-            .limit(30)
-            .all()
-        )
+        done_scans = session.query(Scan).filter_by(status="done").order_by(Scan.started_at.desc()).limit(30).all()
         latest = done_scans[0] if done_scans else None
         previous = done_scans[1] if len(done_scans) > 1 else None
 
@@ -680,9 +595,7 @@ def stats_overview():
         new_findings_latest = 0
         if latest:
             new_findings_latest = (
-                session.query(FindingTracker)
-                .filter_by(first_scan_id=latest.id, resolved=False)
-                .count()
+                session.query(FindingTracker).filter_by(first_scan_id=latest.id, resolved=False).count()
             )
 
         findings_by_scan = []
@@ -746,15 +659,11 @@ def open_findings(domain: Optional[str] = None, severity: Optional[str] = None):
 def latest_changes():
     session = SessionLocal()
     try:
-        latest = (
-            session.query(Scan).filter_by(status="done").order_by(Scan.started_at.desc()).first()
-        )
+        latest = session.query(Scan).filter_by(status="done").order_by(Scan.started_at.desc()).first()
         if not latest:
             return {"scan": None, "new_assets": [], "new_findings": []}
         new_assets = session.query(AssetTracker).filter_by(first_scan_id=latest.id).all()
-        new_findings = (
-            session.query(FindingTracker).filter_by(first_scan_id=latest.id, resolved=False).all()
-        )
+        new_findings = session.query(FindingTracker).filter_by(first_scan_id=latest.id, resolved=False).all()
         return {
             "scan": latest.date,
             "new_assets": [{"domain": a.domain, "host": a.host} for a in new_assets],
@@ -772,6 +681,32 @@ def latest_changes():
         session.close()
 
 
+def _scan_ws_message(data: str) -> str:
+    """Classify one scanlive payload for the WebSocket client.
+
+    Structured pipeline events arrive as single-line JSON with the envelope
+    marker {"easm": 1, ...} — the marker is stripped and the event forwarded
+    as a typed message (phase/counter/status). Anything else is a log line.
+    """
+    try:
+        payload = json.loads(data)
+    except (ValueError, TypeError):
+        payload = None
+    if isinstance(payload, dict) and payload.get("easm") == 1:
+        payload.pop("easm", None)
+        return json.dumps(payload)
+    return json.dumps({"type": "log", "line": data})
+
+
+def _scan_final_status(scan_id: int) -> str:
+    session = SessionLocal()
+    try:
+        scan = session.get(Scan, scan_id)
+        return scan.status if scan else "done"
+    finally:
+        session.close()
+
+
 @app.websocket("/ws/scan")
 async def ws_scan(ws: WebSocket):
     if not auth.valid_session(ws.cookies.get(auth.SESSION_COOKIE)):
@@ -780,14 +715,25 @@ async def ws_scan(ws: WebSocket):
     await ws.accept()
     import redis.asyncio as aioredis
 
+    scan_id_param = ws.query_params.get("scan_id")
     session = SessionLocal()
     try:
-        scan = (
-            session.query(Scan)
-            .filter(Scan.status.in_(["queued", "running"]))
-            .order_by(Scan.started_at.desc())
-            .first()
-        ) or session.query(Scan).order_by(Scan.started_at.desc()).first()
+        if scan_id_param is not None:
+            try:
+                wanted = int(scan_id_param)
+            except ValueError:
+                wanted = -1
+            scan = session.get(Scan, wanted)
+            if scan is None:
+                await ws.close(code=4404)
+                return
+        else:
+            scan = (
+                session.query(Scan)
+                .filter(Scan.status.in_(["queued", "running"]))
+                .order_by(Scan.started_at.desc())
+                .first()
+            ) or session.query(Scan).order_by(Scan.started_at.desc()).first()
         scan_id = scan.id if scan else None
         scan_state_val = scan.status if scan else None
         scan_date = scan.date if scan else None
@@ -795,7 +741,7 @@ async def ws_scan(ws: WebSocket):
         session.close()
 
     if scan_id is None:
-        await ws.send_text(json.dumps({"type": "done", "date": ""}))
+        await ws.send_text(json.dumps({"type": "done", "date": "", "status": "done"}))
         await ws.close()
         return
 
@@ -806,6 +752,12 @@ async def ws_scan(ws: WebSocket):
             if isinstance(line, bytes):
                 line = line.decode(errors="replace")
             await ws.send_text(json.dumps({"type": "log", "line": line}))
+
+        phases = await r.lrange(phase_key(scan_id), 0, -1)
+        for entry in phases:
+            if isinstance(entry, bytes):
+                entry = entry.decode(errors="replace")
+            await ws.send_text(_scan_ws_message(entry))
 
         if scan_state_val in ("queued", "running"):
             pubsub = r.pubsub()
@@ -818,9 +770,17 @@ async def ws_scan(ws: WebSocket):
                     if isinstance(data, bytes):
                         data = data.decode(errors="replace")
                     if data == "__DONE__":
-                        await ws.send_text(json.dumps({"type": "done", "date": scan_date}))
+                        await ws.send_text(
+                            json.dumps(
+                                {
+                                    "type": "done",
+                                    "date": scan_date,
+                                    "status": _scan_final_status(scan_id),
+                                }
+                            )
+                        )
                         break
-                    await ws.send_text(json.dumps({"type": "log", "line": data}))
+                    await ws.send_text(_scan_ws_message(data))
             except WebSocketDisconnect:
                 pass
             finally:
@@ -830,13 +790,28 @@ async def ws_scan(ws: WebSocket):
                 except Exception:
                     pass
         else:
-            await ws.send_text(json.dumps({"type": "done", "date": scan_date}))
+            await ws.send_text(json.dumps({"type": "done", "date": scan_date, "status": scan_state_val}))
     finally:
         await r.aclose()
     try:
         await ws.close()
     except Exception:
         pass
+
+
+# ── Container & Scan Logs ────────────────────────────────────────────────────
+
+app.get("/api/logs/services")(logroutes.list_log_services)
+app.get("/api/logs/{service}")(logroutes.get_service_logs)
+app.get("/api/scans/{date}/log")(logroutes.get_scan_log)
+
+
+@app.websocket("/ws/logs")
+async def ws_logs(ws: WebSocket):
+    if not auth.valid_session(ws.cookies.get(auth.SESSION_COOKIE)):
+        await ws.close(code=4401)
+        return
+    await logroutes.ws_logs(ws)
 
 
 # ── Static Frontend ──────────────────────────────────────────────────────────

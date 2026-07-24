@@ -16,6 +16,12 @@ from db import (
     SessionLocal,
     utcnow,
 )
+from pipeline.parsers import (
+    attribute_domain,
+    parse_finding_line,
+    parse_httpx_line,
+    parse_nmap,
+)
 
 RESULTS_DIR = "/results"
 
@@ -25,83 +31,6 @@ def _read_lines(path: str) -> list[str]:
         return []
     with open(path, errors="replace") as f:
         return [line.strip() for line in f if line.strip()]
-
-
-def attribute_domain(host: str, domains: list[str]) -> str:
-    for d in domains:
-        if host == d or host.endswith("." + d):
-            return d
-    return ""
-
-
-def _parse_httpx_line(line: str):
-    """Format: https://host [status] [title] [tech]  (title optional)."""
-    parts = line.split(" [")
-    url = parts[0].strip()
-    host = re.sub(r"^https?://", "", url).split("/")[0].split(":")[0]
-    status, title, tech = None, None, None
-    tags = [p.rstrip("]").strip() for p in parts[1:]]
-    rest = []
-    for t in tags:
-        if t.isdigit() and status is None:
-            status = int(t)
-        else:
-            rest.append(t)
-    if len(rest) >= 2:
-        title, tech = rest[0], rest[1]
-    elif len(rest) == 1:
-        if "," in rest[0]:
-            tech = rest[0]
-        else:
-            title = rest[0]
-    return url, host, status, title, tech
-
-
-def _parse_nmap(path: str):
-    """Returns (host->ports, host->ip) from nmap -oN output."""
-    ports: dict[str, list[str]] = {}
-    ips: dict[str, str] = {}
-    current = None
-    for line in _read_lines(path):
-        m = re.match(r"Nmap scan report for (\S+?)(?: \((\S+)\))?$", line)
-        if m:
-            current = m.group(1)
-            if m.group(2):
-                ips[current] = m.group(2)
-            elif re.match(r"^\d+\.\d+\.\d+\.\d+$", current):
-                ips[current] = current
-            ports.setdefault(current, [])
-        elif current and "/tcp" in line and " open " in line:
-            port = line.split("/")[0].strip()
-            if port.isdigit():
-                ports[current].append(port)
-    return ports, ips
-
-
-def _parse_finding_line(line: str, domains: list[str], scan_time):
-    """Format: [template] [http] [severity] https://host/path ..."""
-    template = None
-    severity = "info"
-    host = None
-    m = re.match(r"\[([^\]]+)\]", line)
-    if m:
-        template = m.group(1)
-    for s in ["critical", "high", "medium", "low"]:
-        if f"[{s}]" in line.lower():
-            severity = s
-            break
-    um = re.search(r"https?://([^/\s]+)", line)
-    if um:
-        host = um.group(1).split(":")[0]
-    return Finding(
-        domain=attribute_domain(host, domains) if host else "",
-        host=host,
-        template=template,
-        severity=severity,
-        raw=line,
-        first_seen=scan_time,
-        last_seen=scan_time,
-    )
 
 
 def _finding_key(template: str | None, host: str | None, raw: str) -> tuple[str, str]:
@@ -192,11 +121,11 @@ def ingest_scan(
     scan_time = scan.finished_at or scan.started_at or utcnow()
 
     subdomains = _read_lines(os.path.join(out_dir, "subdomains.txt"))
-    ports_map, ip_map = _parse_nmap(os.path.join(out_dir, "ports.txt"))
+    ports_map, ip_map = parse_nmap(os.path.join(out_dir, "ports.txt"))
 
     http_map: dict[str, tuple] = {}
     for line in _read_lines(os.path.join(out_dir, "http-results.txt")):
-        url, host, status, title, tech = _parse_httpx_line(line)
+        url, host, status, title, tech = parse_httpx_line(line)
         http_map[host] = (status, title, tech)
 
     for host in subdomains:
@@ -215,9 +144,19 @@ def ingest_scan(
         )
 
     for line in _read_lines(os.path.join(out_dir, "vulns.txt")):
-        f = _parse_finding_line(line, domains, scan_time)
-        f.scan_id = scan.id
-        session.add(f)
+        template, severity, host = parse_finding_line(line)
+        session.add(
+            Finding(
+                scan_id=scan.id,
+                domain=attribute_domain(host, domains) if host else "",
+                host=host,
+                template=template,
+                severity=severity,
+                raw=line,
+                first_seen=scan_time,
+                last_seen=scan_time,
+            )
+        )
 
     session.flush()
     changes = _apply_trackers(session, scan)

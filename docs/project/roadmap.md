@@ -36,7 +36,7 @@ Legend: Effort S = small (< 0.5 days), M = medium (0.5–1.5 days), L = large (2
 - Persistent job status; schedule continues after backend restart.
 - Acceptance: Cron `*/15 * * * *` demonstrably triggers scans; UI shows "next scan: <time>".
 
-### M5: Notifications Complete [M] — SMTP/Discord done (2026-07-21), Slack pending
+### M5: Notifications Complete [M] — done (2026-07-21 SMTP/Discord; 2026-07-23 Slack via M12)
 - Implement Slack webhook in script (analogous to Discord) or move both into a Python module.
 - Respect `notify_on` (`new_asset`, `new_vuln`).
 - Addition: notification on scan failure.
@@ -115,7 +115,7 @@ Legend: Effort S = small (< 0.5 days), M = medium (0.5–1.5 days), L = large (2
 
 ## Phase 5 — Scan Engine Rework
 
-### M12: Modular Scan Pipeline with Live Progress [L]
+### M12: Modular Scan Pipeline with Live Progress [L] — done (2026-07-23)
 - **Modular architecture:** Replace the monolithic `run-easm.sh` shell script with a
   Python-based scan orchestrator. Each tool (subfinder, dnsx, httpx, nmap, nuclei)
   becomes a pluggable pipeline step defined declaratively (command, args, timeout,

@@ -43,8 +43,8 @@ RUN nuclei -update-templates -silent || true
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py auth.py notify.py db.py ingest.py scanqueue.py scanner.py ./
-COPY scripts/ ./scripts/
+COPY main.py auth.py notify.py db.py ingest.py scanqueue.py scanner.py config.py containerlogs.py logroutes.py ./
+COPY pipeline/ ./pipeline/
 COPY alembic.ini ./
 COPY alembic/ ./alembic/
 

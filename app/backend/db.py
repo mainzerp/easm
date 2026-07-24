@@ -53,7 +53,7 @@ class Scan(Base):
     date: Mapped[str] = mapped_column(String, unique=True, index=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    status: Mapped[str] = mapped_column(String, default="running")  # running | done | failed
+    status: Mapped[str] = mapped_column(String, default="running")  # queued | running | done | failed | canceled
     triggered_by: Mapped[str] = mapped_column(String, default="manual")  # manual | schedule
     nuclei_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     job_id: Mapped[str | None] = mapped_column(String, nullable=True)
