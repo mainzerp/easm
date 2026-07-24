@@ -48,6 +48,7 @@ def _pump(stream, q: "queue.Queue") -> None:
 class PipelineRunner:
     POLL_INTERVAL = 0.5
     KILL_GRACE_S = 10
+    HEARTBEAT_S = 30
 
     def __init__(self, scan_id: int, out_dir: str, domains: list[str], cfg: dict, publisher, stop_check):
         self.scan_id = scan_id
@@ -184,10 +185,12 @@ class PipelineRunner:
         )
         q: queue.Queue = queue.Queue()
         threading.Thread(target=_pump, args=(proc.stdout, q), daemon=True).start()
-        deadline = time.monotonic() + step.timeout_s if step.timeout_s else None
+        started = time.monotonic()
+        deadline = started + step.timeout_s if step.timeout_s else None
 
         canceled = False
         failure = None
+        last_activity = started
         while True:
             try:
                 item = q.get(timeout=self.POLL_INTERVAL)
@@ -195,6 +198,11 @@ class PipelineRunner:
                 item = ""
             if item:
                 self.publisher.log(item.rstrip())
+                last_activity = time.monotonic()
+            elif time.monotonic() - last_activity >= self.HEARTBEAT_S:
+                elapsed = int(time.monotonic() - started)
+                self.publisher.log(f"[heartbeat] {step.key} still running ({elapsed}s elapsed)")
+                last_activity = time.monotonic()
             if self.stop_check():
                 canceled = True
                 self._kill_process(proc)

@@ -1,8 +1,12 @@
 # Version
 
-Current version: 0.4.1
+Current version: 0.4.2
 
 ## Version History
+
+### 0.4.2 - 2026-07-24
+- Added a runner heartbeat: phases with no output for 30 s emit `[heartbeat] <step> still running (Xs elapsed)` so long silent tools no longer look stuck in the live log.
+- nuclei now runs with `-stats -stats-interval 30`, printing scan progress statistics during the vulnerability phase.
 
 ### 0.4.1 - 2026-07-24
 - Fixed HTTP Probing phase: the Python `httpx` CLI shim (pulled in by the new socket-proxy dependency) shadowed the ProjectDiscovery httpx binary in `/usr/local/bin`, so the phase always failed and downstream nuclei scans were skipped. The Go binary is now installed as `httpx-pd` and the pipeline registry invokes that name.

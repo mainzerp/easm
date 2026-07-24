@@ -216,6 +216,9 @@ def nuclei_step() -> StepDefinition:
             "-o",
             _out(ctx, "vulns.txt"),
             "-silent",
+            "-stats",
+            "-stats-interval",
+            "30",
         ]
 
     return StepDefinition(

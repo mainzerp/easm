@@ -190,7 +190,7 @@ enable flags.
 | 4 | `httpx` | HTTP Probing | `httpx-pd -l resolved.txt -silent -title -status-code -tech-detect -o http-results.txt` | 300 s | no | `enable_httpx` | `http` |
 | 5 | `extract_urls` | URL Extraction | native: regex `https?://[^ ]+` over http-results.txt → urls.txt | — | no | always | — |
 | 6 | `nmap` | Port Scan | `nmap -iL resolved.txt -p <ports> --open -oN ports.txt -T4` | 600 s | no | `enable_nmap` | — |
-| 7 | `nuclei` | Vulnerability Scan | `nuclei -l urls.txt -severity <cfg> -o vulns.txt -silent` | 1200 s | no | `enable_nuclei` | `findings` |
+| 7 | `nuclei` | Vulnerability Scan | `nuclei -l urls.txt -severity <cfg> -o vulns.txt -silent -stats -stats-interval 30` | 1200 s | no | `enable_nuclei` | `findings` |
 
 Failure semantics: a failed **critical** step (subfinder, dnsx) aborts the
 pipeline and marks the scan `failed`. A failed non-critical step marks the
@@ -201,6 +201,10 @@ process group (SIGTERM, SIGKILL after a 10 s grace).
 Note: the ProjectDiscovery httpx binary is installed as `httpx-pd` in the
 image because the Python `httpx` package (socket-proxy client) ships a
 same-named CLI shim that would otherwise shadow it in `/usr/local/bin`.
+
+Silent phases stay visible: the runner emits a `[heartbeat] <step> still
+running (Xs elapsed)` log line after 30 s without output (repeating), and
+nuclei runs with `-stats -stats-interval 30` so long scans report progress.
 
 **Adding a new tool:** add a `StepDefinition` builder in `pipeline/steps.py`,
 register it at the desired position in `pipeline/registry.py`, add the binary

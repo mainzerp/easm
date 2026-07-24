@@ -309,6 +309,43 @@ def test_cancel_mid_step_terminates_group(monkeypatch, tmp_path):
     assert status_events[-1]["status"] == "canceled"
 
 
+def test_heartbeat_emitted_during_silent_step(monkeypatch, tmp_path):
+    class SlowEofStream:
+        def __init__(self):
+            self._done = False
+
+        def readline(self):
+            if not self._done:
+                self._done = True
+                time.sleep(2.6)
+            return ""
+
+    class SilentProc(FakeProc):
+        def __init__(self):
+            super().__init__(returncode=0)
+            self.stdout = SlowEofStream()
+
+    step = StepDefinition(
+        key="quiet",
+        title="Quiet Tool",
+        kind="command",
+        build=lambda ctx: ["quiettool"],
+        timeout_s=0,
+        output_file="quiet.txt",
+    )
+    monkeypatch.setattr("pipeline.runner.build_steps", lambda cfg: [step])
+    monkeypatch.setattr(PipelineRunner, "HEARTBEAT_S", 1)
+    monkeypatch.setattr("pipeline.runner.subprocess.Popen", lambda argv, **kw: SilentProc())
+    _patch_killpg(monkeypatch)
+    publisher = ListPublisher()
+
+    outcome = _runner(tmp_path, publisher).run()
+
+    assert outcome.status == "done"
+    heartbeats = [line for line in publisher.logs if line.startswith("[heartbeat] quiet still running")]
+    assert len(heartbeats) >= 2
+
+
 def test_skip_when_input_empty(monkeypatch, tmp_path):
     script = {**HAPPY_SCRIPT, "subfinder": {"output": ""}}
     calls = _patch_popen(monkeypatch, script)
