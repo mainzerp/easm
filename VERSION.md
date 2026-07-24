@@ -1,8 +1,11 @@
 # Version
 
-Current version: 0.4.0
+Current version: 0.4.1
 
 ## Version History
+
+### 0.4.1 - 2026-07-24
+- Fixed HTTP Probing phase: the Python `httpx` CLI shim (pulled in by the new socket-proxy dependency) shadowed the ProjectDiscovery httpx binary in `/usr/local/bin`, so the phase always failed and downstream nuclei scans were skipped. The Go binary is now installed as `httpx-pd` and the pipeline registry invokes that name.
 
 ### 0.4.0 - 2026-07-23
 - Replaced the monolithic `run-easm.sh` shell orchestrator with a modular Python scan pipeline (`app/backend/pipeline/`): declarative `StepDefinition`s, config-driven tool registry, streamed subprocess execution with timeout/cancel semantics.

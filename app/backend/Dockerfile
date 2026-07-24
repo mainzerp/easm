@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=builder /go/bin/subfinder /usr/local/bin/
 COPY --from=builder /go/bin/dnsx      /usr/local/bin/
-COPY --from=builder /go/bin/httpx     /usr/local/bin/
+COPY --from=builder /go/bin/httpx     /usr/local/bin/httpx-pd
 COPY --from=builder /go/bin/nuclei    /usr/local/bin/
 COPY --from=builder /go/bin/alterx    /usr/local/bin/
 

@@ -121,7 +121,7 @@ HAPPY_SCRIPT = {
         "stdout": "subfinder stdout line\n",
     },
     "dnsx": {"output": "a.example.com\n"},
-    "httpx": {"output": "https://a.example.com [200] [Welcome] [nginx]\n"},
+    "httpx-pd": {"output": "https://a.example.com [200] [Welcome] [nginx]\n"},
     "nmap": {"output": "Nmap scan report for a.example.com (192.0.2.1)\n80/tcp open http\n"},
     "nuclei": {"output": "[tpl] [http] [high] https://a.example.com/x\n"},
 }
@@ -243,7 +243,7 @@ def test_critical_subfinder_failure_aborts(monkeypatch, tmp_path):
 
 
 def test_noncritical_httpx_failure_continues_with_warning(monkeypatch, tmp_path):
-    script = {**HAPPY_SCRIPT, "httpx": {"rc": 2}}
+    script = {**HAPPY_SCRIPT, "httpx-pd": {"rc": 2}}
     calls = _patch_popen(monkeypatch, script)
     _patch_killpg(monkeypatch)
     publisher = ListPublisher()

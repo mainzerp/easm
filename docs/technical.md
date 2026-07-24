@@ -187,7 +187,7 @@ enable flags.
 | 1 | `subfinder` | Subdomain Discovery | `subfinder -d <d>... -silent -o subdomains.txt` | 300 s | yes | always | `subdomains` |
 | 2 | `alterx` | Subdomain Permutation | `alterx -l subdomains.txt -silent -o alterx.txt` + merge into `subdomains.txt` | 300 s | no | `enable_alterx` (default off) | — |
 | 3 | `dnsx` | DNS Resolution | `dnsx -l subdomains.txt -silent -o resolved.txt` | 300 s | yes | always | `resolved` |
-| 4 | `httpx` | HTTP Probing | `httpx -l resolved.txt -silent -title -status-code -tech-detect -o http-results.txt` | 300 s | no | `enable_httpx` | `http` |
+| 4 | `httpx` | HTTP Probing | `httpx-pd -l resolved.txt -silent -title -status-code -tech-detect -o http-results.txt` | 300 s | no | `enable_httpx` | `http` |
 | 5 | `extract_urls` | URL Extraction | native: regex `https?://[^ ]+` over http-results.txt → urls.txt | — | no | always | — |
 | 6 | `nmap` | Port Scan | `nmap -iL resolved.txt -p <ports> --open -oN ports.txt -T4` | 600 s | no | `enable_nmap` | — |
 | 7 | `nuclei` | Vulnerability Scan | `nuclei -l urls.txt -severity <cfg> -o vulns.txt -silent` | 1200 s | no | `enable_nuclei` | `findings` |
@@ -197,6 +197,10 @@ pipeline and marks the scan `failed`. A failed non-critical step marks the
 phase `failed`, records a warning (stored in `Scan.error`), and the scan ends
 `done`. Steps with empty input are `skipped`. Cancellation kills the step's
 process group (SIGTERM, SIGKILL after a 10 s grace).
+
+Note: the ProjectDiscovery httpx binary is installed as `httpx-pd` in the
+image because the Python `httpx` package (socket-proxy client) ships a
+same-named CLI shim that would otherwise shadow it in `/usr/local/bin`.
 
 **Adding a new tool:** add a `StepDefinition` builder in `pipeline/steps.py`,
 register it at the desired position in `pipeline/registry.py`, add the binary

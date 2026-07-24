@@ -130,7 +130,7 @@ def dnsx_step() -> StepDefinition:
 def httpx_step() -> StepDefinition:
     def build(ctx: dict) -> list[str]:
         return [
-            "httpx",
+            "httpx-pd",
             "-l",
             _out(ctx, "resolved.txt"),
             "-silent",
